@@ -162,7 +162,11 @@ local function _execute_test(test_dir_path, source_code, command, callback)
         source_code = source_code,
         command = command,
         result = vim.split(out.stdout, '\n'),
-      }, callback)
+      }, function()
+        if out.code == 0 then
+          callback()
+        end
+      end)
     end)
   end)()
 end
