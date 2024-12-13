@@ -55,7 +55,7 @@ function M.new()
       'help',
       '  e:    edit test case',
       '  <CR>: view/hide test case',
-      '  d:    debug',
+      '  d:    debug log',
       '',
     }, lines)
     vim.api.nvim_set_option_value('modifiable', true, { buf = self.bufnr })
