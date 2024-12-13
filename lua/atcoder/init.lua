@@ -2,6 +2,7 @@ require('atcoder.cmds')
 local utils = require('atcoder.utils')
 local window = require('atcoder.window')
 local auth = require('atcoder.auth')
+local database = require('atcoder.database')
 
 local async = require('plenary.async')
 local curl = require('plenary.curl')
@@ -40,94 +41,28 @@ local config = {}
 ---@field bufnr integer
 ---@field win Window
 ---@field test_cases table
+---@field db Database|nil
 local state = {
   bufnr = -1,
   win = nil, ---@diagnostic disable-line
   test_cases = {},
+  db = nil,
 }
-
-local function open_sqlite()
-  vim.cmd('term sqlite3 ' .. config.database_path)
-end
-
-local function update_contest_data()
-  async.void(function()
-    local out = system({
-      'rm',
-      '-f',
-      config.database_path,
-    })
-    if out.code ~= 0 then
-      vim.notify(out.stderr, vim.log.levels.WARN)
-      return
-    end
-
-    local out5 = system({
-      -- 'curl',
-      -- '-s',
-      -- '--compressed',
-      -- 'https://kenkoooo.com/atcoder/resources/problems.json',
-      'cat',
-      config.problems,
-    })
-    if out5.code ~= 0 then
-      vim.notify(out5.stderr, vim.log.levels.WARN)
-      return
-    end
-
-    local out6 = system({
-      'jq',
-      '-r',
-      '.[]|[.id, .contest_id, .problem_index, .name, .title]|@csv',
-    }, {
-      stdin = out5.stdout,
-    })
-    if out6.code ~= 0 then
-      vim.notify(out6.stderr, vim.log.levels.WARN)
-      return
-    end
-
-    local file2 = io.open(config.problems_csv, 'w')
-    if file2 ~= nil then
-      file2:write('"id","contest_id","problem_index","name","title"\n')
-      file2:write(out6.stdout)
-      file2:close()
-    end
-
-    local out7 = system({
-      'sqlite3',
-      '-separator',
-      ',',
-      config.database_path,
-      '.import ' .. config.problems_csv .. ' problems',
-    })
-    if out7.code ~= 0 then
-      vim.notify(out7.stderr, vim.log.levels.WARN)
-    end
-    vim.notify('finish updating atcoder.db')
-  end)()
-end
 
 --- Retrieve the contest_id in the order of the URL written at the beginning of the file, the ATCODER_CONTEST_ID environment variable, and the directory name.
 ---@return string
 local function get_contest_id()
   local id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/([%w_-]+)/') or os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname() -- base directory name
 
-  local res = vim
-    .system({
-      'sqlite3',
-      config.database_path,
-      string.format("SELECT EXISTS (SELECT * FROM problems WHERE contest_id = '%s')", id),
-    })
-    :wait()
-  if res.stdout == '0' then
+  local found = state.db:exist_contest_id(id)
+  if not found then
     vim.notify('invalid contest_id: ' .. id, vim.log.levels.WARN)
   end
 
   return id
 end
 
----@return string
+---@return string|nil
 local function get_problem_id(contest_id)
   local problem_id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/[%w_-]+/tasks/([%w_-]+)')
   if problem_id then
@@ -136,18 +71,8 @@ local function get_problem_id(contest_id)
   local problem_index = utils.get_filename_without_ext()
   problem_index = string.lower(problem_index)
 
-  local out = vim
-    .system({
-      'sqlite3',
-      config.database_path,
-      string.format("SELECT id FROM problems WHERE contest_id = '%s' AND lower(problem_index) = '%s'", contest_id, problem_index),
-    })
-    :wait()
-  if out.code ~= 0 then
-    vim.notify(out.stderr, vim.log.levels.WARN)
-    return ''
-  end
-  return vim.trim(out.stdout)
+  local id = state.db:get_problem_id(contest_id, problem_index)
+  return id
 end
 
 ---@return string
@@ -211,7 +136,7 @@ local function exec_config()
   local prog = {
     cpp = {
       build = function(callback)
-        local outdir = '/tmp/' .. get_problem_id()
+        local outdir = '/tmp/' .. get_problem_id(get_contest_id())
         local exec_path = outdir .. '/' .. utils.get_filename_without_ext()
         local file_timestamp = utils.get_file_timestamp(utils.get_absolute_path())
         local exec_timestamp = utils.get_file_timestamp(exec_path)
@@ -238,7 +163,7 @@ local function exec_config()
         end
       end,
       cmd = function()
-        local outdir = '/tmp/' .. get_problem_id()
+        local outdir = '/tmp/' .. get_problem_id(get_contest_id())
         vim.fn.mkdir(outdir, 'p')
         local exec_path = outdir .. '/' .. utils.get_filename_without_ext()
         return exec_path
@@ -387,7 +312,9 @@ local function setup_cmds()
   local cmds = {
     {
       name = 'AtCoderUpdateContestData',
-      fn = update_contest_data,
+      fn = function()
+        state.db:update_contest_data()
+      end,
     },
     {
       name = 'AtCoderTest',
@@ -402,7 +329,7 @@ local function setup_cmds()
     {
       name = 'AtCoderSubmit',
       fn = function()
-        submit(get_contest_id(), get_problem_id())
+        submit(get_contest_id(), get_problem_id(get_contest_id()))
       end,
     },
     {
@@ -434,7 +361,6 @@ local function rerun_tests_at_atcoder_buf()
   local test_dir_path = _get_test_dir_from_buf()
   local src_code = _get_source_code_from_buf()
   local command = _get_exec_cmd_from_buf()
-  vim.print({ test_dir_path, command, src_code })
   _execute_test(test_dir_path, src_code, command)
 end
 
@@ -532,6 +458,7 @@ function M.setup(opts)
   vim.fn.mkdir(cache_dir, 'p')
   state.bufnr = vim.api.nvim_create_buf(false, true)
   state.win = window.new(state.bufnr)
+  state.db = database.new()
   vim.api.nvim_set_option_value('filetype', 'atcoder', { buf = state.bufnr })
   setup_keymap()
   if config.define_cmds then
@@ -539,14 +466,18 @@ function M.setup(opts)
   end
 end
 
-M.update_contest_data = update_contest_data
+M.update_contest_data = function()
+  state.db:update_contest_data()
+end
 M._download_tests = _download_tests
 M.download_tests = download_tests
 M.execute_test = execute_test
 M._execute_test = _execute_test
 M.login = auth.login
 M.submit = submit
-M.open_sqlite = open_sqlite
+M.open_database = function()
+  state.db:open()
+end
 
 vim.keymap.set({ 'n' }, '<leader>at', function()
   if vim.api.nvim_get_option_value('filetype', { buf = 0 }) == 'atcoder' then
