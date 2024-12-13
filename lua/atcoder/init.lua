@@ -3,6 +3,7 @@ local utils = require('atcoder.utils')
 local auth = require('atcoder.auth')
 local database = require('atcoder.database')
 local test_result = require('atcoder.test_result')
+local lang = require('atcoder.language')
 
 local async = require('plenary.async')
 local curl = require('plenary.curl')
@@ -52,6 +53,7 @@ local function get_contest_id()
   local found = state.db:exist_contest_id(id)
   if not found then
     vim.notify('invalid contest_id: ' .. id, vim.log.levels.WARN)
+    return ''
   end
 
   return id
@@ -127,57 +129,6 @@ local function download_tests(include_system)
   end
 end
 
-local function exec_config()
-  local prog = {
-    cpp = {
-      build = function(callback)
-        local outdir = '/tmp/' .. get_problem_id(get_contest_id())
-        local exec_path = outdir .. '/' .. utils.get_filename_without_ext()
-        local file_timestamp = utils.get_file_timestamp(utils.get_absolute_path())
-        local exec_timestamp = utils.get_file_timestamp(exec_path)
-        if exec_timestamp == nil or file_timestamp > exec_timestamp then
-          vim.notify('compiling')
-          vim.fn.mkdir(outdir, 'p')
-          vim.system({
-            'g++',
-            '-std=gnu++20',
-            '-O2',
-            '-o',
-            exec_path,
-            utils.get_absolute_path(),
-          }, { text = true }, function()
-            vim.notify('finish compiling')
-            if type(callback) == 'function' then
-              callback()
-            end
-          end)
-        else
-          if type(callback) == 'function' then
-            callback()
-          end
-        end
-      end,
-      cmd = function()
-        local outdir = '/tmp/' .. get_problem_id(get_contest_id())
-        vim.fn.mkdir(outdir, 'p')
-        local exec_path = outdir .. '/' .. utils.get_filename_without_ext()
-        return exec_path
-      end,
-    },
-  }
-  local prog_cfg = prog[vim.bo.filetype]
-  local build = vim.tbl_get(prog_cfg, 'build')
-  if build == nil then
-    build = function(cb)
-      cb()
-    end
-  end
-  return {
-    build,
-    prog_cfg.cmd(),
-  }
-end
-
 local function _execute_test(test_dir_path, source_code, command, callback)
   state.test_result:reset_test_cases()
   async.void(function()
@@ -208,10 +159,15 @@ local function _execute_test(test_dir_path, source_code, command, callback)
 end
 
 local function execute_test(callback)
-  local build, cmd = unpack(exec_config())
-  build(function()
+  local build, cmd = unpack(lang.get_config())
+  local file_path = utils.get_absolute_path()
+  local test_dirname = get_test_dirname()
+  local cfg = {
+    file_path = file_path,
+  }
+  build(cfg, function()
     vim.schedule(function()
-      _execute_test(get_test_dirname(), utils.get_absolute_path(), cmd, callback)
+      _execute_test(test_dirname, file_path, cmd(cfg), callback)
     end)
   end)
 end
