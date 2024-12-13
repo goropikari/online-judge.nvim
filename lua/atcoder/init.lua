@@ -44,7 +44,7 @@ local config = {}
 
 ---@class State
 ---@field db Database
----@field test_result TestResult
+---@field test_result_viewer TestResultViewer
 local state = {}
 
 --- Retrieve the contest_id in the order of the URL written at the beginning of the file, the ATCODER_CONTEST_ID environment variable, and the directory name.
@@ -139,7 +139,7 @@ local function download_tests(include_system, callback)
 end
 
 local function _execute_test(test_dir_path, source_code, command, callback)
-  state.test_result:reset_test_cases()
+  state.test_result_viewer:reset_test_cases()
   async.void(function()
     local cmd = {
       'oj',
@@ -157,7 +157,7 @@ local function _execute_test(test_dir_path, source_code, command, callback)
     }
     local out = system(cmd)
     vim.schedule(function()
-      state.test_result:update({
+      state.test_result_viewer:update({
         test_dir_path = test_dir_path,
         source_code = source_code,
         command = command,
@@ -273,7 +273,7 @@ function M.setup(opts)
   vim.fn.mkdir(config.out_dirpath, 'p')
   vim.fn.mkdir(cache_dir, 'p')
   state.db = database.new()
-  state.test_result = test_result.new()
+  state.test_result_viewer = test_result.new()
   if config.define_cmds then
     setup_cmds()
   end

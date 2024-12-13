@@ -1,12 +1,25 @@
 local M = {}
 
----@class TestResult
+---@class TestResultViewer
+---@field open function
+---@field reset_test_cases function
+---@field update function
+---@field bufnr integer
+---@field winid integer
+---@field test_cases {string:integer}
+---@field source_code string
+---@field command string
 ---@field test_dir_path string
+
+---@class TestResult
 ---@field source_code string
 ---@field command string
 ---@field result string[]
+---@field test_dir_path string
 
 function M.new()
+  ---@type TestResultViewer
+  ---@diagnostic disable-next-line
   local obj = {
     bufnr = (function()
       local bufnr = vim.api.nvim_create_buf(false, true)

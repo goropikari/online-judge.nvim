@@ -16,6 +16,7 @@ local lang = {
       local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
       local file_timestamp = utils.get_file_timestamp(file_path)
       local exec_timestamp = utils.get_file_timestamp(exec_path)
+
       if exec_timestamp == nil or file_timestamp > exec_timestamp then
         vim.notify('compiling')
         vim.fn.mkdir(outdir, 'p')
