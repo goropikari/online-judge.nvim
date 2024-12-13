@@ -37,12 +37,10 @@ local config = {}
 
 ---@class State
 ---@field bufnr integer
----@field prev_bufnr integer
 ---@field win Window
 ---@field test_cases table
 local state = {
   bufnr = -1,
-  prev_bufnr = -1,
   win = nil, ---@diagnostic disable-line
   test_cases = {},
 }
@@ -247,7 +245,7 @@ end
 local function exec_config()
   local prog = {
     cpp = {
-      build = function()
+      build = function(callback)
         local outdir = '/tmp/' .. get_problem_id()
         local exec_path = outdir .. '/' .. utils.get_filename_without_ext()
         local file_timestamp = utils.get_file_timestamp(utils.get_absolute_path())
@@ -255,7 +253,23 @@ local function exec_config()
         if exec_timestamp == nil or file_timestamp > exec_timestamp then
           vim.notify('compiling')
           vim.fn.mkdir(outdir, 'p')
-          vim.system({ 'g++', '-std=gnu++20', '-O2', '-o', exec_path, utils.get_absolute_path() }):wait()
+          vim.system({
+            'g++',
+            '-std=gnu++20',
+            '-O2',
+            '-o',
+            exec_path,
+            utils.get_absolute_path(),
+          }, {}, function()
+            vim.notify('finish compiling')
+            if type(callback) == 'function' then
+              callback()
+            end
+          end)
+        else
+          if type(callback) == 'function' then
+            callback()
+          end
         end
       end,
       cmd = function()
@@ -268,28 +282,18 @@ local function exec_config()
   }
   local prog_cfg = prog[vim.bo.filetype]
   local build = vim.tbl_get(prog_cfg, 'build')
+  if build == nil then
+    build = function(cb)
+      cb()
+    end
+  end
   return {
     build,
     prog_cfg.cmd(),
   }
 end
 
-local function _execute_test(test_dir_path, command, callback)
-  local curr_buf = vim.api.nvim_get_current_buf()
-  local curr_win = vim.api.nvim_get_current_win()
-  --
-  if vim.api.nvim_get_option_value('filetype', { buf = curr_buf }) == 'atcoder' then
-    -- recompile even if active window is test previewer.
-    vim.api.nvim_set_current_win(state.prev_win)
-    local build, _ = unpack(exec_config())
-    if build ~= nil then
-      build()
-    end
-    vim.api.nvim_set_current_win(curr_win)
-  else
-    state.prev_win = curr_win
-  end
-
+local function _execute_test(test_dir_path, src_code, command, callback)
   state.test_cases = {}
   async.void(function()
     local cmd = {
@@ -317,6 +321,7 @@ local function _execute_test(test_dir_path, command, callback)
       end
       lines = vim.list_extend({
         'test_dir: ' .. test_dir_path,
+        'source code: ' .. src_code,
         'cmd: ' .. command,
         '',
         'help',
@@ -343,16 +348,12 @@ local function _execute_test(test_dir_path, command, callback)
 end
 
 local function execute_test(callback)
-  if vim.fn.exepath('oj') == '' then
-    vim.notify('oj is not installed', vim.log.levels.WARN)
-    return
-  end
-
   local build, cmd = unpack(exec_config())
-  if build ~= nil then
-    build()
-  end
-  _execute_test(get_test_dirname(), cmd, callback)
+  build(function()
+    vim.schedule(function()
+      _execute_test(get_test_dirname(), utils.get_absolute_path(), cmd, callback)
+    end)
+  end)
 end
 
 local function login()
@@ -454,23 +455,27 @@ local function _get_test_dir_from_buf()
   return string.match(lines[1], 'test_dir: ([%w%p]+)')
 end
 
-local function _get_exec_cmd_from_buf()
+local function _get_source_code_from_buf()
   local lines = vim.api.nvim_buf_get_lines(0, 1, 2, false)
+  return string.match(lines[1], 'source code: ([%w%p]+)')
+end
+
+local function _get_exec_cmd_from_buf()
+  local lines = vim.api.nvim_buf_get_lines(0, 2, 3, false)
   return string.match(lines[1], 'cmd: ([%w%p]+)')
 end
 
 local function rerun_tests_at_atcoder_buf()
   local test_dir_path = _get_test_dir_from_buf()
+  local src_code = _get_source_code_from_buf()
   local command = _get_exec_cmd_from_buf()
-  _execute_test(test_dir_path, command)
+  vim.print({ test_dir_path, command, src_code })
+  _execute_test(test_dir_path, src_code, command)
 end
 
 local function setup_keymap()
   -- rerun test
   vim.keymap.set({ 'n' }, 'r', function()
-    -- local test_dir_path = _get_test_dir_from_buf()
-    -- local command = _get_exec_cmd_from_buf()
-    -- _execute_test(test_dir_path, command)
     rerun_tests_at_atcoder_buf()
   end, {
     buffer = state.bufnr,
