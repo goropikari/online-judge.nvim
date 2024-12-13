@@ -1,6 +1,7 @@
 require('atcoder.cmds')
 local utils = require('atcoder.utils')
 local window = require('atcoder.window')
+local auth = require('atcoder.auth')
 
 local async = require('plenary.async')
 local curl = require('plenary.curl')
@@ -342,28 +343,6 @@ local function execute_test(callback)
   end)
 end
 
-local function login()
-  async.void(function()
-    local cmd = {
-      'oj',
-      'login',
-      '-u',
-      vim.fn.input('username'),
-      '-p',
-      vim.fn.inputsecret('password'),
-      'https://atcoder.jp',
-    }
-
-    local res = system(cmd)
-    if res.code ~= 0 then
-      vim.notify(res.stdout, vim.log.levels.WARN)
-      vim.notify(res.stderr, vim.log.levels.WARN)
-      return
-    end
-    vim.notify(res.stdout)
-  end)()
-end
-
 ---@return string
 local function generate_submit_url(contest_id, problem_id)
   return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
@@ -428,7 +407,7 @@ local function setup_cmds()
     },
     {
       name = 'AtCoderLogin',
-      fn = login,
+      fn = auth.login,
     },
   }
   for _, cmd in pairs(cmds) do
@@ -565,7 +544,7 @@ M._download_tests = _download_tests
 M.download_tests = download_tests
 M.execute_test = execute_test
 M._execute_test = _execute_test
-M.login = login
+M.login = auth.login
 M.submit = submit
 M.open_sqlite = open_sqlite
 
