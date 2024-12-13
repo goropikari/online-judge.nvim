@@ -293,7 +293,52 @@ local function exec_config()
   }
 end
 
-local function _execute_test(test_dir_path, src_code, command, callback)
+---@class TestResult
+---@field code integer
+---@field stdout string
+---@field stderr string
+---@field test_dir_path string
+---@field source_code string
+---@field command string
+
+---@params TestResult
+---@params callback function
+local function _update_test_result(test_result, callback)
+  local lines = vim.split(test_result.stdout, '\n')
+  for i, line in ipairs(lines) do
+    line = line:gsub('^%[%w+%]%s', '')
+    line = line:gsub('^sample%-', '▷ sample%-')
+    line = line:gsub('^custom%-', '▷ custom%-')
+    lines[i] = line
+  end
+  lines = vim.list_extend({
+    'test_dir: ' .. test_result.test_dir_path,
+    'source code: ' .. test_result.source_code,
+    'cmd: ' .. test_result.command,
+    '',
+    'help',
+    '  e:    edit test case',
+    '  r:    rerun test cases',
+    '  <CR>: view/hide test case',
+    '',
+  }, lines)
+  vim.api.nvim_set_option_value('modifiable', true, { buf = state.bufnr })
+  vim.api.nvim_buf_set_lines(state.bufnr, 0, -1, false, {})
+  vim.api.nvim_buf_set_lines(state.bufnr, 0, -1, false, lines)
+  vim.api.nvim_buf_set_lines(state.bufnr, -1, -1, false, { 'Executed at:', vim.fn.strftime('%c') })
+  vim.api.nvim_set_option_value('modifiable', false, { buf = state.bufnr })
+  state.win:open()
+
+  if test_result.code ~= 0 then
+    return
+  end
+
+  if type(callback) == 'function' then
+    callback()
+  end
+end
+
+local function _execute_test(test_dir_path, source_code, command, callback)
   state.test_cases = {}
   async.void(function()
     local cmd = {
@@ -312,38 +357,15 @@ local function _execute_test(test_dir_path, src_code, command, callback)
     }
     local out = system(cmd, {})
     vim.schedule(function()
-      local lines = vim.split(out.stdout, '\n')
-      for i, line in ipairs(lines) do
-        line = line:gsub('^%[%w+%]%s', '')
-        line = line:gsub('^sample%-', '▷ sample%-')
-        line = line:gsub('^custom%-', '▷ custom%-')
-        lines[i] = line
-      end
-      lines = vim.list_extend({
-        'test_dir: ' .. test_dir_path,
-        'source code: ' .. src_code,
-        'cmd: ' .. command,
-        '',
-        'help',
-        '  e:    edit test case',
-        '  r:    rerun test cases',
-        '  <CR>: view/hide test case',
-        '',
-      }, lines)
-      vim.api.nvim_set_option_value('modifiable', true, { buf = state.bufnr })
-      vim.api.nvim_buf_set_lines(state.bufnr, 0, -1, false, {})
-      vim.api.nvim_buf_set_lines(state.bufnr, 0, -1, false, lines)
-      vim.api.nvim_buf_set_lines(state.bufnr, -1, -1, false, { 'Executed at:', vim.fn.strftime('%c') })
-      vim.api.nvim_set_option_value('modifiable', false, { buf = state.bufnr })
-      state.win:open()
+      _update_test_result({
+        code = out.code,
+        stdout = out.stdout,
+        stderr = out.stderr,
+        test_dir_path = test_dir_path,
+        source_code = source_code,
+        command = command,
+      }, callback)
     end)
-    if out.code ~= 0 then
-      return
-    end
-
-    if type(callback) == 'function' then
-      callback()
-    end
   end)()
 end
 
