@@ -13,6 +13,8 @@ end, 2)
 
 local M = {}
 
+local nopfn = function(_) end
+
 local cache_dir = vim.fn.stdpath('cache') .. '/atcoder.nvim'
 
 ---@class PluginConfig
@@ -79,6 +81,13 @@ end
 
 local function _download_tests(contest_id, problem_id, include_system, callback)
   local test_dirname = get_test_dirname()
+  if vim.fn.isdirectory(test_dirname) == 1 then
+    vim.notify('test files are already downloaded')
+    if type(callback) == 'function' then
+      callback()
+    end
+    return
+  end
   contest_id = contest_id or ''
   problem_id = problem_id or ''
   if contest_id == '' or problem_id == '' then
@@ -119,14 +128,14 @@ local function _download_tests(contest_id, problem_id, include_system, callback)
   end)()
 end
 
-local function download_tests(include_system)
+local function download_tests(include_system, callback)
+  callback = callback or nopfn
   local contest_id = get_contest_id()
   local problem_id = get_problem_id(contest_id)
-  if vim.fn.isdirectory(problem_id) == 0 then
-    _download_tests(contest_id, problem_id, include_system)
-  else
-    vim.notify('already downloaded')
-  end
+  _download_tests(contest_id, problem_id, include_system, function(opts)
+    opts = vim.tbl_deep_extend('force', { contest_id = contest_id, problem_id = problem_id }, opts or {})
+    callback(opts)
+  end)
 end
 
 local function _execute_test(test_dir_path, source_code, command, callback)
