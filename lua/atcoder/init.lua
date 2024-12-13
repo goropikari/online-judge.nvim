@@ -405,9 +405,7 @@ local function generate_submit_url(contest_id, problem_id)
   return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
 end
 
-local function submit()
-  local contest_id = get_contest_id()
-  local problem_id = get_problem_id(contest_id)
+local function submit(contest_id, problem_id)
   local url = generate_submit_url(contest_id, problem_id)
   local filepath = utils.get_absolute_path()
 
@@ -460,7 +458,9 @@ local function setup_cmds()
     },
     {
       name = 'AtCoderSubmit',
-      fn = submit,
+      fn = function()
+        submit(get_contest_id(), get_problem_id())
+      end,
     },
     {
       name = 'AtCoderLogin',
