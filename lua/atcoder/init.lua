@@ -168,15 +168,28 @@ local function _execute_test(test_dir_path, source_code, command, callback)
 end
 
 local function execute_test(callback)
-  local build, cmd = unpack(lang.get_config())
+  callback = callback or nopfn
+  local build_fn, cmd_fn = unpack(lang.get_config())
   local file_path = utils.get_absolute_path()
   local test_dirname = get_test_dirname()
   local cfg = {
     file_path = file_path,
+    test_dirname = test_dirname,
   }
-  build(cfg, function()
+  cfg.command = cmd_fn(cfg)
+  ---@params post_build {file_path:string, test_dirname:string, command:string}
+  build_fn(cfg, function(post_build)
+    cfg = vim.tbl_deep_extend('force', cfg, post_build or {})
     vim.schedule(function()
-      _execute_test(test_dirname, file_path, cmd(cfg), callback)
+      ---@params post_download {contest_id:string, problm_id:string}
+      download_tests(false, function(post_download)
+        cfg = vim.tbl_deep_extend('force', cfg, post_download or {})
+        ---@params post_test {}
+        _execute_test(test_dirname, file_path, cfg.command, function(post_test)
+          cfg = vim.tbl_deep_extend('force', cfg, post_test or {})
+          callback(cfg)
+        end)
+      end)
     end)
   end)
 end
