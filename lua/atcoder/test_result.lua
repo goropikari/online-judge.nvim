@@ -81,14 +81,14 @@ function M.new()
   -- edit test case
   vim.keymap.set({ 'n' }, 'e', function()
     local test_dir_path = obj.test_dir_path
-    local test_case = vim.fn.expand('<cWORD>')
+    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
+    test_case = string.match(test_case, '%w+%-%d+') or ''
     local file_path_prefix = test_dir_path .. '/' .. test_case
 
     local input_file_path = file_path_prefix .. '.in'
     local output_file_path = file_path_prefix .. '.out'
     if vim.fn.filereadable(input_file_path) == 0 or vim.fn.filereadable(output_file_path) == 0 then
       -- do nothing if file is not exist.
-      vim.print(input_file_path, output_file_path)
       return
     end
 
