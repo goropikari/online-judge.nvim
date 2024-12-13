@@ -244,8 +244,7 @@ local function download_tests(include_system)
   end
 end
 
----@return string
-local function exec_cmd()
+local function exec_config()
   local prog = {
     cpp = {
       build = function()
@@ -269,10 +268,10 @@ local function exec_cmd()
   }
   local prog_cfg = prog[vim.bo.filetype]
   local build = vim.tbl_get(prog_cfg, 'build')
-  if build ~= nil then
-    build()
-  end
-  return prog_cfg.cmd()
+  return {
+    build,
+    prog_cfg.cmd(),
+  }
 end
 
 local function _execute_test(test_dir_path, command, callback)
@@ -282,7 +281,10 @@ local function _execute_test(test_dir_path, command, callback)
   if vim.api.nvim_get_option_value('filetype', { buf = curr_buf }) == 'atcoder' then
     -- recompile even if active window is test previewer.
     vim.api.nvim_set_current_win(state.prev_win)
-    exec_cmd()
+    local build, _ = unpack(exec_config())
+    if build ~= nil then
+      build()
+    end
     vim.api.nvim_set_current_win(curr_win)
   else
     state.prev_win = curr_win
@@ -346,7 +348,11 @@ local function execute_test(callback)
     return
   end
 
-  _execute_test(get_test_dirname(), exec_cmd(), callback)
+  local build, cmd = unpack(exec_config())
+  if build ~= nil then
+    build()
+  end
+  _execute_test(get_test_dirname(), cmd, callback)
 end
 
 local function login()
