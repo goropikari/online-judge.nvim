@@ -61,49 +61,6 @@ local function update_contest_data()
       return
     end
 
-    -- local out2 = system({
-    --   -- 'curl',
-    --   -- '-s',
-    --   -- '--compressed',
-    --   -- 'https://kenkoooo.com/atcoder/resources/contest-problem.json',
-    --   'cat',
-    --   config.contest_problem,
-    -- })
-    -- if out2.code ~= 0 then
-    --   vim.notify(out2.stderr, vim.log.levels.WARN)
-    --   return
-    -- end
-    --
-    -- local out3 = system({
-    --   'jq',
-    --   '-r',
-    --   '.[]|[.contest_id, .problem_id]|@csv',
-    -- }, {
-    --   stdin = out2.stdout,
-    -- })
-    -- if out3.code ~= 0 then
-    --   vim.notify(out3.stderr, vim.log.levels.WARN)
-    --   return
-    -- end
-    --
-    -- local file = io.open(config.contest_problem_csv, 'w')
-    -- if file ~= nil then
-    --   file:write('"contest_id","problem_id"\n')
-    --   file:write(out3.stdout)
-    --   file:close()
-    -- end
-    --
-    -- local out4 = system({
-    --   'sqlite3',
-    --   '-separator',
-    --   ',',
-    --   config.database_path,
-    --   '.import ' .. config.contest_problem_csv .. ' contests',
-    -- })
-    -- if out4.code ~= 0 then
-    --   vim.notify(out4.stderr, vim.log.levels.WARN)
-    -- end
-
     local out5 = system({
       -- 'curl',
       -- '-s',
@@ -197,7 +154,7 @@ local function get_test_dirname()
   return vim.fn.expand('%:p:h') .. '/test_' .. utils.get_filename_without_ext()
 end
 
-local function _download_tests(contest_id, problem_id, include_system)
+local function _download_tests(contest_id, problem_id, include_system, callback)
   local test_dirname = get_test_dirname()
   contest_id = contest_id or ''
   problem_id = problem_id or ''
@@ -220,7 +177,6 @@ local function _download_tests(contest_id, problem_id, include_system)
   if include_system then
     table.insert(cmd, '--system')
   end
-  -- vim.print(cmd)
   async.void(function()
     local out = system(cmd, {})
     if out.code ~= 0 then
@@ -229,6 +185,14 @@ local function _download_tests(contest_id, problem_id, include_system)
       return
     end
     vim.notify('Download tests of ' .. problem_id .. ': ' .. test_dirname)
+
+    if type(callback) == 'function' then
+      callback({
+        contest_id = contest_id,
+        problem_id = problem_id,
+        test_dirname = test_dirname,
+      })
+    end
   end)()
 end
 
