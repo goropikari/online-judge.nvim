@@ -55,6 +55,7 @@ function M.new()
       'help',
       '  e:    edit test case',
       '  <CR>: view/hide test case',
+      '  d:    debug',
       '',
     }, lines)
     vim.api.nvim_set_option_value('modifiable', true, { buf = self.bufnr })
@@ -73,7 +74,9 @@ function M.new()
   vim.keymap.set({ 'n' }, 'd', function()
     vim.print(vim.inspect(obj))
     vim.cmd('mess')
-  end)
+  end, {
+    buffer = obj.bufnr,
+  })
 
   -- edit test case
   vim.keymap.set({ 'n' }, 'e', function()
@@ -101,7 +104,8 @@ function M.new()
   -- preview test case
   vim.keymap.set({ 'n' }, '<CR>', function()
     local test_dir_path = obj.test_dir_path
-    local test_case = vim.fn.expand('<cWORD>')
+    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
+    test_case = string.match(test_case, '%w+%-%d+') or ''
     local file_path_prefix = test_dir_path .. '/' .. test_case
 
     local input_file_path = file_path_prefix .. '.in'
