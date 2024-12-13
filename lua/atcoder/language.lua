@@ -2,15 +2,18 @@ local utils = require('atcoder.utils')
 
 local M = {}
 
----@class LanguageConfig
----@field file_path string
----@field contest_id? string
----@field problem_id? string
+---@class LanguageBuildOption
+---@field build fun(cfg:BuildConfig, callback:function)
+---@field cmd fun(cfg:BuildConfig): string
+
+---@class BuildConfig
+---@field source_code string
 
 local lang = {
   cpp = {
+    ---@param cfg BuildConfig
     build = function(cfg, callback)
-      local file_path = vim.fn.fnamemodify(cfg.file_path, ':p')
+      local file_path = vim.fn.fnamemodify(cfg.source_code, ':p')
       local outdir = '/tmp/atcoder.nvim/' .. vim.fn.fnamemodify(file_path, ':h:t')
       vim.fn.mkdir(outdir, 'p')
       local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
@@ -38,8 +41,9 @@ local lang = {
         end
       end
     end,
+    ---@param cfg BuildConfig
     cmd = function(cfg)
-      local file_path = cfg.file_path
+      local file_path = cfg.source_code
       local outdir = '/tmp/atcoder.nvim/' .. vim.fn.fnamemodify(file_path, ':h:t')
       vim.fn.mkdir(outdir, 'p')
       local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
@@ -48,7 +52,9 @@ local lang = {
   },
 }
 
-function M.get_config(filetype)
+---@params filetype string|nil
+---@return LanguageBuildOption
+function M.get_option(filetype)
   filetype = filetype or vim.bo.filetype
   local cfg = lang[filetype]
   cfg.build = cfg.build or function(config, callback)

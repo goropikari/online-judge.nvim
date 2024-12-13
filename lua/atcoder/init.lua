@@ -173,11 +173,12 @@ end
 
 local function execute_test(callback)
   callback = callback or nopfn
-  local build_fn, cmd_fn = unpack(lang.get_config())
-  local file_path = utils.get_absolute_path()
+  local build_fn, cmd_fn = unpack(lang.get_option())
+  local source_code = utils.get_absolute_path()
   local test_dirname = get_test_dirname()
+  ---@type BuildConfig
   local cfg = {
-    file_path = file_path,
+    source_code = source_code,
     test_dirname = test_dirname,
   }
   cfg.command = cmd_fn(cfg)
@@ -189,7 +190,7 @@ local function execute_test(callback)
       download_tests(false, function(post_download)
         cfg = vim.tbl_deep_extend('force', cfg, post_download or {})
         ---@params post_test {}
-        _execute_test(test_dirname, file_path, cfg.command, function(post_test)
+        _execute_test(test_dirname, source_code, cfg.command, function(post_test)
           cfg = vim.tbl_deep_extend('force', cfg, post_test or {})
           callback(cfg)
         end)
