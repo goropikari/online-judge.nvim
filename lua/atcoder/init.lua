@@ -187,6 +187,7 @@ local function execute_test(callback)
   }
   local command = cmd_fn(ctx)
   ctx.command = command
+  state.test_result_viewer:start_spinner()
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
@@ -201,6 +202,8 @@ local function execute_test(callback)
         ---@type {code:integer,test_dir_path:string,source_code:string,command:string,result:string[],stderr:string}
         local test_res = _execute_test_async(test_dirname, source_code, command)
         ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
+
+        state.test_result_viewer:stop_spinner()
 
         state.test_result_viewer:update(test_res)
 

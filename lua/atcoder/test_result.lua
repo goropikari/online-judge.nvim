@@ -1,15 +1,21 @@
+local spinner = require('atcoder.spinner')
+
 local M = {}
 
 ---@class TestResultViewer
 ---@field open function
 ---@field reset_test_cases function
 ---@field update function
+---@field start_spinner function
+---@field stop_spinner function
+---
 ---@field bufnr integer
 ---@field winid integer
 ---@field test_cases {string:integer}
 ---@field source_code string
 ---@field command string
 ---@field test_dir_path string
+---@field spin Spinner
 
 ---@class TestResult
 ---@field source_code string
@@ -32,6 +38,7 @@ function M.new()
     command = '',
     test_dir_path = '',
   }
+  obj.spin = spinner.new(obj.bufnr)
 
   obj.open = function(self)
     if not vim.api.nvim_win_is_valid(self.winid) then
@@ -81,6 +88,13 @@ function M.new()
     if type(callback) == 'function' then
       callback()
     end
+  end
+
+  function obj.start_spinner(self)
+    self.spin:start()
+  end
+  function obj.stop_spinner(self)
+    self.spin:stop()
   end
 
   -- debug
