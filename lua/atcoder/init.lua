@@ -129,11 +129,12 @@ local function _download_tests(contest_id, problem_id, include_system, callback)
 end
 
 local function download_tests(include_system, callback)
-  callback = callback or nopfn
   local contest_id = get_contest_id()
   local problem_id = get_problem_id(contest_id)
   _download_tests(contest_id, problem_id, include_system, function(opts)
-    opts = vim.tbl_deep_extend('force', { contest_id = contest_id, problem_id = problem_id }, opts or {})
+    callback = callback or nopfn
+    opts = opts or {}
+    opts = vim.tbl_deep_extend('force', opts, { contest_id = contest_id, problem_id = problem_id })
     callback(opts)
   end)
 end
@@ -162,9 +163,11 @@ local function _execute_test(test_dir_path, source_code, command, callback)
         source_code = source_code,
         command = command,
         result = vim.split(out.stdout, '\n'),
-      }, function()
+      }, function(opts)
+        callback = callback or nopfn
+        opts = opts or {}
         if out.code == 0 then
-          callback()
+          callback(opts)
         end
       end)
     end)
@@ -176,25 +179,32 @@ local function execute_test(callback)
   local build_fn, cmd_fn = unpack(lang.get_option())
   local source_code = utils.get_absolute_path()
   local test_dirname = get_test_dirname()
-  ---@type BuildConfig
-  local cfg = {
+  ---@class TestContext: BuildConfig
+  ---@field test_dirname string
+  ---@field command string
+  local ctx = {
     source_code = source_code,
     test_dirname = test_dirname,
   }
-  cfg.command = cmd_fn(cfg)
-  ---@params post_build {file_path:string, test_dirname:string, command:string}
-  build_fn(cfg, function(post_build)
-    cfg = vim.tbl_deep_extend('force', cfg, post_build or {})
+  local command = cmd_fn(ctx)
+  ctx.command = command
+  build_fn(ctx, function(post_build)
+    ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
-      ---@params post_download {contest_id:string, problm_id:string}
-      download_tests(false, function(post_download)
-        cfg = vim.tbl_deep_extend('force', cfg, post_download or {})
-        ---@params post_test {}
-        _execute_test(test_dirname, source_code, cfg.command, function(post_test)
-          cfg = vim.tbl_deep_extend('force', cfg, post_test or {})
-          callback(cfg)
-        end)
-      end)
+      async.void(function()
+        local download_tests_async = async.wrap(download_tests, 2)
+        local _execute_test_async = async.wrap(_execute_test, 4)
+
+        ---@type {contest_id:string, problm_id:string}
+        local download_res = download_tests_async(false)
+        ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
+
+        ---@type {}
+        local test_res = _execute_test_async(test_dirname, source_code, command)
+        ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
+
+        callback(ctx)
+      end)()
     end)
   end)
 end
