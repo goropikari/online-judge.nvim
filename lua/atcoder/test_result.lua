@@ -22,6 +22,7 @@ local M = {}
 ---@field filetype string
 ---@field contest_id? string
 ---@field problem_id? string
+---@field lang_id integer
 ---@field rerun_fn function
 ---@field submit_fn function
 
@@ -31,6 +32,7 @@ local M = {}
 ---@field result string[]
 ---@field test_dir_path string
 ---@field filetype string
+---@field lang_id integer
 ---@field contest_id? string
 ---@field problem_id? string
 
@@ -74,6 +76,7 @@ function M.new()
     self.contest_id = test_result.contest_id
     self.problem_id = test_result.problem_id
     self.filetype = test_result.filetype
+    self.lang_id = test_result.lang_id
     local lines = test_result.result
     for i, line in ipairs(lines) do
       line = line:gsub('^%[%w+%]%s', '')

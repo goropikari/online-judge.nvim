@@ -25,6 +25,7 @@ local cache_dir = vim.fn.stdpath('cache') .. '/atcoder.nvim'
 ---@field contest_problem_csv string
 ---@field problems_csv string
 ---@field define_cmds boolean
+---@field lang {string:LanguageOption}
 
 ---@type PluginConfig
 local default_config = {
@@ -36,6 +37,7 @@ local default_config = {
   contest_problem_csv = cache_dir .. '/contest-problem.csv',
   problems_csv = cache_dir .. '/problems.csv',
   define_cmds = true,
+  lang = {},
 }
 
 ---@type PluginConfig
@@ -178,7 +180,7 @@ end
 -- execute callback if pass the tests
 local function execute_test(callback)
   callback = callback or nopfn
-  local build_fn, cmd_fn = unpack(lang.get_option())
+  local build_fn, cmd_fn, lang_id = unpack(lang.get_option())
   local source_code = utils.get_absolute_path()
   local test_dirname = get_test_dirname()
   ---@class TestContext: BuildConfig
@@ -188,6 +190,7 @@ local function execute_test(callback)
     source_code = source_code,
     test_dirname = test_dirname,
     filetype = vim.bo.filetype,
+    lang_id = lang_id,
   }
   local command = cmd_fn(ctx)
   ctx.command = command
@@ -230,13 +233,14 @@ local function rerun_for_test_result_viewer(callback)
   local source_code = cfg.source_code
   local command = cfg.command
 
+  local build_fn, _, lang_id = unpack(lang.get_option(filetype))
   local ctx = {
     source_code = source_code,
     test_dirname = test_dirname,
     filetype = filetype,
+    lang_id = lang_id,
   }
 
-  local build_fn, _ = unpack(lang.get_option(filetype))
   state.test_result_viewer:start_spinner()
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
@@ -279,7 +283,11 @@ local function generate_submit_url(contest_id, problem_id)
   return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
 end
 
-local function submit(contest_id, problem_id, source_code)
+---@param contest_id string
+---@param problem_id string
+---@param source_code string
+---@param lang_id integer
+local function submit(contest_id, problem_id, source_code, lang_id)
   local url = generate_submit_url(contest_id, problem_id)
   -- local filepath = utils.get_absolute_path()
   local file_path = source_code
@@ -308,6 +316,8 @@ local function submit(contest_id, problem_id, source_code)
             'oj',
             'submit',
             '-y',
+            '-l',
+            lang_id,
             url,
             file_path,
           })
@@ -331,55 +341,53 @@ local function _submit()
   local contest_id = ''
   local problem_id = ''
   local source_code = ''
+  local lang_id = 0
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
     local viewer_state = state.test_result_viewer:get_state()
     contest_id = viewer_state.contest_id
     problem_id = viewer_state.problem_id
     source_code = viewer_state.source_code
+    lang_id = viewer_state.lang_id
   else
     contest_id = get_contest_id()
     problem_id = get_problem_id(contest_id) or error('failed to get problem_id')
     source_code = utils.get_absolute_path()
+    lang_id = lang.get_option(vim.bo.filetype)[3]
   end
-  submit(contest_id, problem_id, source_code)
+  submit(contest_id, problem_id, source_code, lang_id)
 end
 
 local function setup_cmds()
-  local cmds = {
-    {
-      name = 'AtCoderUpdateContestData',
-      fn = function()
-        state.db:update_contest_data()
-      end,
-    },
-    {
-      name = 'AtCoderTest',
-      fn = __execute_test,
-    },
-    {
-      name = 'AtCoderDownloadTest',
-      fn = function()
-        download_tests(false)
-      end,
-    },
-    {
-      name = 'AtCoderSubmit',
-      fn = function()
-        _submit()
-      end,
-    },
-    {
-      name = 'AtCoderLogin',
-      fn = auth.login,
-    },
+  local fns = {
+    test = __execute_test,
+    submit = _submit,
+    download_tests = function()
+      download_tests(false)
+    end,
+    update_contest_data = function()
+      state.db:update_contest_data()
+    end,
+    login = auth.login,
   }
-  for _, cmd in pairs(cmds) do
-    vim.api.nvim_create_user_command(cmd.name, cmd.fn, {})
-  end
+  vim.api.nvim_create_user_command('AtCoder', function(opts)
+    fns[opts.args]()
+  end, {
+    complete = function(arg_lead, cmd_line, cursor_pos)
+      return {
+        'test',
+        'submit',
+        'download_test',
+        'login',
+        'update_contest_data',
+      }
+    end,
+    nargs = 1,
+  })
 end
 
 function M.setup(opts)
   config = vim.tbl_deep_extend('force', default_config, opts or {})
+  lang.setup(config.lang)
 
   vim.fn.mkdir(config.out_dirpath, 'p')
   vim.fn.mkdir(cache_dir, 'p')

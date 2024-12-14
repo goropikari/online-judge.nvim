@@ -2,16 +2,19 @@ local utils = require('atcoder.utils')
 
 local M = {}
 
----@class LanguageBuildOption
+---@class LanguageOption
 ---@field build fun(cfg:BuildConfig, callback:function)
 ---@field cmd fun(cfg:BuildConfig): string
+---@field id integer
 
 ---@class BuildConfig
 ---@field source_code string
 
+-- language id は提出ページの HTML source を見て言語の対応表から探るしか方法はなさそう
 local lang = {
   cpp = {
     ---@param cfg BuildConfig
+    ---@param callback fun(cfg: BuildConfig)
     build = function(cfg, callback)
       local file_path = vim.fn.fnamemodify(cfg.source_code, ':p')
       local outdir = '/tmp/atcoder.nvim/' .. vim.fn.fnamemodify(file_path, ':h:t')
@@ -49,11 +52,19 @@ local lang = {
       local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
       return exec_path
     end,
+    id = 5028, -- C++ 23
+  },
+  python = {
+    build = nil, -- use default fn
+    cmd = function(cfg)
+      return 'python3 ' .. cfg.source_code
+    end,
+    id = 5078, -- pypy3
   },
 }
 
 ---@params filetype string|nil
----@return LanguageBuildOption
+---@return LanguageOption
 function M.get_option(filetype)
   filetype = filetype or vim.bo.filetype
   local cfg = lang[filetype]
@@ -65,7 +76,13 @@ function M.get_option(filetype)
   return {
     cfg.build,
     cfg.cmd,
+    cfg.id,
   }
+end
+
+---@param opts {string:LanguageOption}
+function M.setup(opts)
+  lang = vim.tbl_deep_extend('force', lang, opts or {})
 end
 
 return M
