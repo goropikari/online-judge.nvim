@@ -52,11 +52,11 @@ local state = {}
 local function get_contest_id()
   local id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/([%w_-]+)/') or os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname() -- base directory name
 
-  local found = state.db:exist_contest_id(id)
-  if not found then
-    vim.notify('invalid contest_id: ' .. id, vim.log.levels.WARN)
-    return ''
-  end
+  -- local found = state.db:exist_contest_id(id)
+  -- if not found then
+  --   vim.notify('invalid contest_id: ' .. id, vim.log.levels.ERROR)
+  --   return ''
+  -- end
 
   return id
 end
@@ -81,6 +81,7 @@ end
 
 local function _download_tests(contest_id, problem_id, include_system, callback)
   local test_dirname = get_test_dirname()
+  vim.print(test_dirname)
   if vim.fn.isdirectory(test_dirname) == 1 then
     vim.notify('test files are already downloaded')
     if type(callback) == 'function' then
@@ -91,7 +92,7 @@ local function _download_tests(contest_id, problem_id, include_system, callback)
   contest_id = contest_id or ''
   problem_id = problem_id or ''
   if contest_id == '' or problem_id == '' then
-    vim.notify('contest_id or problem_id is empty: contest_id = ' .. contest_id .. ', problem_id = ' .. problem_id)
+    vim.notify('contest_id or problem_id is empty: contest_id = ' .. contest_id .. ', problem_id = ' .. problem_id, vim.log.levels.ERROR)
     return
   end
   local cmd = {
@@ -113,7 +114,7 @@ local function _download_tests(contest_id, problem_id, include_system, callback)
     local out = system(cmd)
     if out.code ~= 0 then
       -- oj の log は stdout に出る
-      vim.notify(out.stdout, vim.log.levels.WARN)
+      vim.notify(out.stdout, vim.log.levels.ERROR)
       return
     end
     vim.notify('Download tests of ' .. problem_id .. ': ' .. test_dirname)
@@ -158,22 +159,20 @@ local function _execute_test(test_dir_path, source_code, command, callback)
     }
     local out = system(cmd)
     vim.schedule(function()
-      state.test_result_viewer:update({
+      callback = callback or nopfn
+      callback({
+        code = out.code,
         test_dir_path = test_dir_path,
         source_code = source_code,
         command = command,
         result = vim.split(out.stdout, '\n'),
-      }, function(opts)
-        callback = callback or nopfn
-        opts = opts or {}
-        if out.code == 0 then
-          callback(opts)
-        end
-      end)
+        stderr = out.stderr,
+      })
     end)
   end)()
 end
 
+-- execute callback if pass the tests
 local function execute_test(callback)
   callback = callback or nopfn
   local build_fn, cmd_fn = unpack(lang.get_option())
@@ -199,11 +198,15 @@ local function execute_test(callback)
         local download_res = download_tests_async(false)
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
-        ---@type {}
+        ---@type {code:integer,test_dir_path:string,source_code:string,command:string,result:string[],stderr:string}
         local test_res = _execute_test_async(test_dirname, source_code, command)
         ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
 
-        callback(ctx)
+        state.test_result_viewer:update(test_res)
+
+        if test_res.code == 0 then
+          callback(ctx)
+        end
       end)()
     end)
   end)
@@ -238,8 +241,8 @@ local function submit(contest_id, problem_id)
             filepath,
           })
           if out.code ~= 0 then
-            vim.notify(out.stdout, vim.log.levels.WARN)
-            vim.notify(out.stderr, vim.log.levels.WARN)
+            vim.notify(out.stdout, vim.log.levels.ERROR)
+            vim.notify(out.stderr, vim.log.levels.ERROR)
           end
           vim.notify(out.stdout)
         end)()
