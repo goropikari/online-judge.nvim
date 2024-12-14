@@ -279,13 +279,14 @@ local function generate_submit_url(contest_id, problem_id)
   return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
 end
 
-local function submit(contest_id, problem_id)
+local function submit(contest_id, problem_id, source_code)
   local url = generate_submit_url(contest_id, problem_id)
-  local filepath = utils.get_absolute_path()
+  -- local filepath = utils.get_absolute_path()
+  local file_path = source_code
 
   local callback = function()
-    if os.getenv('ATCODER_CONFIRM_SUBMISSION') == '1' then
-      local confirm = vim.fn.input('submit [Y/n]')
+    if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
+      local confirm = vim.fn.input('submit [y/N]')
       confirm = string.lower(confirm)
       if not ({ yes = true, y = true })[confirm] then
         return
@@ -308,7 +309,7 @@ local function submit(contest_id, problem_id)
             'submit',
             '-y',
             url,
-            filepath,
+            file_path,
           })
           if out.code ~= 0 then
             vim.notify(out.stdout, vim.log.levels.ERROR)
@@ -325,6 +326,22 @@ local function submit(contest_id, problem_id)
     execute_test(callback)
   end
 end
+
+local function _submit()
+  local contest_id = ''
+  local problem_id = ''
+  local source_code = ''
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+    local viewer_state = state.test_result_viewer:get_state()
+    contest_id = viewer_state.contest_id
+    problem_id = viewer_state.problem_id
+    source_code = viewer_state.source_code
+  else
+    contest_id = get_contest_id()
+    problem_id = get_problem_id(contest_id) or error('failed to get problem_id')
+    source_code = utils.get_absolute_path()
+  end
+  submit(contest_id, problem_id, source_code)
 end
 
 local function setup_cmds()
@@ -348,7 +365,7 @@ local function setup_cmds()
     {
       name = 'AtCoderSubmit',
       fn = function()
-        submit(get_contest_id(), get_problem_id(get_contest_id()))
+        _submit()
       end,
     },
     {
@@ -370,6 +387,7 @@ function M.setup(opts)
 
   state.test_result_viewer = test_result.new()
   state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
+  state.test_result_viewer:register_submit_fn(_submit)
   if config.define_cmds then
     setup_cmds()
   end

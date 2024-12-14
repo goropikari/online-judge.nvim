@@ -10,6 +10,7 @@ local M = {}
 ---@field start_spinner function
 ---@field stop_spinner function
 ---@field register_rerun_fn function
+---@field register_submit_fn function
 ---
 ---@field bufnr integer
 ---@field winid integer
@@ -22,6 +23,7 @@ local M = {}
 ---@field contest_id? string
 ---@field problem_id? string
 ---@field rerun_fn function
+---@field submit_fn function
 
 ---@class TestResult
 ---@field source_code string
@@ -90,6 +92,7 @@ function M.new()
       '  r:    rerun test cases',
       '  e:    edit test case',
       '  <CR>: view/hide test case',
+      '  s:    submit',
       '  d:    debug log',
       '',
     }, lines)
@@ -109,6 +112,21 @@ function M.new()
     self.rerun_fn = fn
   end
 
+  function obj.register_submit_fn(self, fn)
+    self.submit_fn = fn
+  end
+
+  function obj.get_state(self)
+    return {
+      source_code = self.source_code,
+      command = self.command,
+      test_dir_path = self.test_dir_path,
+      contest_id = self.contest_id,
+      problem_id = self.problem_id,
+      filetype = self.filetype,
+    }
+  end
+
   function obj.start_spinner(self)
     self.spin:start()
   end
@@ -123,6 +141,8 @@ function M.new()
     buffer = obj.bufnr,
   })
 
+  vim.keymap.set({ 'n' }, 's', function()
+    obj.submit_fn()
   end, {
     buffer = obj.bufnr,
   })
