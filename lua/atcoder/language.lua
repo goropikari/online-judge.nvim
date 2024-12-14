@@ -30,7 +30,7 @@ local lang = {
           '-o',
           exec_path,
           file_path,
-        }, { text = true }, function()
+        }, { text = true }, function(out)
           if type(callback) == 'function' then
             callback(cfg)
           end

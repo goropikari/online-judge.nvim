@@ -6,24 +6,29 @@ local M = {}
 ---@field open function
 ---@field reset_test_cases function
 ---@field update function
+---@field get_state function
 ---@field start_spinner function
 ---@field stop_spinner function
+---@field register_rerun_fn function
 ---
 ---@field bufnr integer
 ---@field winid integer
 ---@field test_cases {string:integer}
+---@field spin Spinner
 ---@field source_code string
 ---@field command string
 ---@field test_dir_path string
----@field spin Spinner
+---@field filetype string
 ---@field contest_id? string
 ---@field problem_id? string
+---@field rerun_fn function
 
 ---@class TestResult
 ---@field source_code string
 ---@field command string
 ---@field result string[]
 ---@field test_dir_path string
+---@field filetype string
 ---@field contest_id? string
 ---@field problem_id? string
 
@@ -66,6 +71,7 @@ function M.new()
     self.test_dir_path = test_result.test_dir_path
     self.contest_id = test_result.contest_id
     self.problem_id = test_result.problem_id
+    self.filetype = test_result.filetype
     local lines = test_result.result
     for i, line in ipairs(lines) do
       line = line:gsub('^%[%w+%]%s', '')
@@ -74,13 +80,14 @@ function M.new()
       lines[i] = line
     end
     lines = vim.list_extend({
-      'contest_id: ' .. test_result.contest_id or '',
-      'problem_id: ' .. test_result.problem_id or '',
+      'contest_id: ' .. (test_result.contest_id or ''),
+      'problem_id: ' .. (test_result.problem_id or ''),
       'test_dir: ' .. test_result.test_dir_path,
-      'source code: ' .. test_result.source_code,
-      'cmd: ' .. test_result.command,
+      'source_code: ' .. test_result.source_code,
+      'command: ' .. test_result.command,
       '',
       'help',
+      '  r:    rerun test cases',
       '  e:    edit test case',
       '  <CR>: view/hide test case',
       '  d:    debug log',
@@ -98,6 +105,10 @@ function M.new()
     end
   end
 
+  function obj.register_rerun_fn(self, fn)
+    self.rerun_fn = fn
+  end
+
   function obj.start_spinner(self)
     self.spin:start()
   end
@@ -105,10 +116,13 @@ function M.new()
     self.spin:stop()
   end
 
-  -- debug
-  vim.keymap.set({ 'n' }, 'd', function()
-    vim.print(vim.inspect(obj))
-    vim.cmd('mess')
+  -- rerun test cases
+  vim.keymap.set({ 'n' }, 'r', function()
+    obj.rerun_fn()
+  end, {
+    buffer = obj.bufnr,
+  })
+
   end, {
     buffer = obj.bufnr,
   })
@@ -187,6 +201,14 @@ function M.new()
       obj.test_cases[test_case] = nil
     end
     vim.api.nvim_set_option_value('modifiable', false, { buf = obj.bufnr })
+  end, {
+    buffer = obj.bufnr,
+  })
+
+  -- debug
+  vim.keymap.set({ 'n' }, 'd', function()
+    vim.print(vim.inspect(obj))
+    vim.cmd('mess')
   end, {
     buffer = obj.bufnr,
   })

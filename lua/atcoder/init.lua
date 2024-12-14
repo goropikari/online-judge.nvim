@@ -79,13 +79,15 @@ local function get_test_dirname()
   return vim.fn.expand('%:p:h') .. '/test_' .. utils.get_filename_without_ext()
 end
 
-local function _download_tests(contest_id, problem_id, include_system, callback)
-  local test_dirname = get_test_dirname()
-  vim.print(test_dirname)
+local function _download_tests(contest_id, problem_id, test_dirname, include_system, callback)
   if vim.fn.isdirectory(test_dirname) == 1 then
     vim.notify('test files are already downloaded')
     if type(callback) == 'function' then
-      callback()
+      callback({
+        contest_id = contest_id,
+        problem_id = problem_id,
+        test_dirname = test_dirname,
+      })
     end
     return
   end
@@ -132,7 +134,8 @@ end
 local function download_tests(include_system, callback)
   local contest_id = get_contest_id()
   local problem_id = get_problem_id(contest_id)
-  _download_tests(contest_id, problem_id, include_system, function(opts)
+  local test_dirname = get_test_dirname()
+  _download_tests(contest_id, problem_id, test_dirname, include_system, function(opts)
     callback = callback or nopfn
     opts = opts or {}
     opts = vim.tbl_deep_extend('force', opts, { contest_id = contest_id, problem_id = problem_id })
@@ -184,6 +187,7 @@ local function execute_test(callback)
   local ctx = {
     source_code = source_code,
     test_dirname = test_dirname,
+    filetype = vim.bo.filetype,
   }
   local command = cmd_fn(ctx)
   ctx.command = command
@@ -205,8 +209,8 @@ local function execute_test(callback)
 
         state.test_result_viewer:stop_spinner()
 
-        test_res = vim.tbl_deep_extend('force', test_res, download_res)
-        state.test_result_viewer:update(test_res)
+        ctx = vim.tbl_deep_extend('force', ctx, test_res)
+        state.test_result_viewer:update(ctx)
 
         if test_res.code == 0 then
           callback(ctx)
@@ -214,6 +218,60 @@ local function execute_test(callback)
       end)()
     end)
   end)
+end
+
+local function rerun_for_test_result_viewer(callback)
+  callback = callback or nopfn
+  local cfg = state.test_result_viewer:get_state()
+  local contest_id = cfg.contest_id
+  local problem_id = cfg.problem_id
+  local filetype = cfg.filetype
+  local test_dirname = cfg.test_dir_path
+  local source_code = cfg.source_code
+  local command = cfg.command
+
+  local ctx = {
+    source_code = source_code,
+    test_dirname = test_dirname,
+    filetype = filetype,
+  }
+
+  local build_fn, _ = unpack(lang.get_option(filetype))
+  state.test_result_viewer:start_spinner()
+  build_fn(ctx, function(post_build)
+    ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
+    vim.schedule(function()
+      async.void(function()
+        local download_tests_async = async.wrap(_download_tests, 5)
+        local _execute_test_async = async.wrap(_execute_test, 4)
+
+        ---@type {contest_id:string, problm_id:string}
+        local download_res = download_tests_async(contest_id, problem_id, test_dirname, false)
+        ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
+
+        ---@type {code:integer,test_dir_path:string,source_code:string,command:string,result:string[],stderr:string}
+        local test_res = _execute_test_async(test_dirname, source_code, command)
+        ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
+
+        state.test_result_viewer:stop_spinner()
+
+        ctx = vim.tbl_deep_extend('force', ctx, test_res)
+        state.test_result_viewer:update(ctx)
+
+        if test_res.code == 0 then
+          callback(ctx)
+        end
+      end)()
+    end)
+  end)
+end
+
+local function __execute_test()
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+    rerun_for_test_result_viewer()
+    return
+  end
+  execute_test()
 end
 
 ---@return string
@@ -261,7 +319,12 @@ local function submit(contest_id, problem_id)
       end,
     })
   end
-  execute_test(callback)
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+    rerun_for_test_result_viewer(callback)
+  else
+    execute_test(callback)
+  end
+end
 end
 
 local function setup_cmds()
@@ -274,7 +337,7 @@ local function setup_cmds()
     },
     {
       name = 'AtCoderTest',
-      fn = execute_test,
+      fn = __execute_test,
     },
     {
       name = 'AtCoderDownloadTest',
@@ -300,10 +363,13 @@ end
 
 function M.setup(opts)
   config = vim.tbl_deep_extend('force', default_config, opts or {})
+
   vim.fn.mkdir(config.out_dirpath, 'p')
   vim.fn.mkdir(cache_dir, 'p')
   state.db = database.new()
+
   state.test_result_viewer = test_result.new()
+  state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
   if config.define_cmds then
     setup_cmds()
   end
@@ -322,12 +388,7 @@ M.open_database = function()
   state.db:open()
 end
 
-vim.keymap.set({ 'n' }, '<leader>at', function()
-  execute_test()
-end, { desc = 'atcoder: test sample cases' })
-
-vim.keymap.set({ 'n' }, '<leader>ad', function()
-  download_tests()
-end, { desc = 'atcoder: download sample test cases' })
+vim.keymap.set({ 'n' }, '<leader>at', __execute_test, { desc = 'atcoder: test sample cases' })
+vim.keymap.set({ 'n' }, '<leader>ad', download_tests, { desc = 'atcoder: download sample test cases' })
 
 return M
