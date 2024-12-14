@@ -225,6 +225,14 @@ local function submit(contest_id, problem_id)
   local filepath = utils.get_absolute_path()
 
   local callback = function()
+    if os.getenv('ATCODER_CONFIRM_SUBMISSION') == '1' then
+      local confirm = vim.fn.input('submit [Y/n]')
+      confirm = string.lower(confirm)
+      if not ({ yes = true, y = true })[confirm] then
+        return
+      end
+    end
+
     curl.head({
       url = url,
       timeout = 500,
