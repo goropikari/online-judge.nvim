@@ -54,7 +54,11 @@ function M.new()
   obj.spin = spinner.new(obj.bufnr)
 
   obj.open = function(self)
-    if not vim.api.nvim_win_is_valid(self.winid) then
+    local hidden = false
+    hidden = hidden or (not vim.api.nvim_win_is_valid(self.winid))
+    hidden = hidden or vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_win_get_buf(self.winid) }) ~= 'atcoder'
+
+    if hidden then
       self.winid = vim.api.nvim_open_win(self.bufnr, false, {
         split = 'right',
         width = math.floor(vim.o.columns * 0.4),
