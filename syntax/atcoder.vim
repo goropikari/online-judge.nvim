@@ -16,7 +16,6 @@ syntax match AtCoderTestFile /custom-\d\+/
 highlight AtCoderIO guifg=#FFFF00 gui=bold
 syntax keyword AtCoderIO input output expected
 
-highlight AtCoderProgram guifg=#6666FF gui=bold
-syntax match AtCoderProgram /test_dir/
+highlight AtCoderProgram guifg=#66B2FF gui=bold
 syntax match AtCoderProgram /source code/
-syntax match AtCoderProgram /cmd/
+syntax keyword AtCoderProgram contest_id problem_id test_dir cmd

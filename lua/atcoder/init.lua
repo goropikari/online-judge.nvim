@@ -205,6 +205,7 @@ local function execute_test(callback)
 
         state.test_result_viewer:stop_spinner()
 
+        test_res = vim.tbl_deep_extend('force', test_res, download_res)
         state.test_result_viewer:update(test_res)
 
         if test_res.code == 0 then

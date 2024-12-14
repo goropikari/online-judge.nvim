@@ -16,12 +16,16 @@ local M = {}
 ---@field command string
 ---@field test_dir_path string
 ---@field spin Spinner
+---@field contest_id? string
+---@field problem_id? string
 
 ---@class TestResult
 ---@field source_code string
 ---@field command string
 ---@field result string[]
 ---@field test_dir_path string
+---@field contest_id? string
+---@field problem_id? string
 
 function M.new()
   ---@type TestResultViewer
@@ -60,6 +64,8 @@ function M.new()
     self.source_code = test_result.source_code
     self.command = test_result.command
     self.test_dir_path = test_result.test_dir_path
+    self.contest_id = test_result.contest_id
+    self.problem_id = test_result.problem_id
     local lines = test_result.result
     for i, line in ipairs(lines) do
       line = line:gsub('^%[%w+%]%s', '')
@@ -68,6 +74,8 @@ function M.new()
       lines[i] = line
     end
     lines = vim.list_extend({
+      'contest_id: ' .. test_result.contest_id or '',
+      'problem_id: ' .. test_result.problem_id or '',
       'test_dir: ' .. test_result.test_dir_path,
       'source code: ' .. test_result.source_code,
       'cmd: ' .. test_result.command,
