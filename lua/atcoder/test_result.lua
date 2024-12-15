@@ -13,6 +13,7 @@ local M = {}
 ---@field stop_spinner function
 ---@field register_rerun_fn function
 ---@field register_submit_fn function
+---@field _test_file_prefix function
 ---@field _test_file_path_under_cursor function
 ---@field _open_test_case function
 ---
@@ -61,7 +62,7 @@ function M.new()
   obj.spin = spinner.new(obj.bufnr)
 
   obj.open = function(self)
-    -- split などをしたときに winid が元のものとは別のものが割りあたっていることがあるため常に buffer 基準で winid を取得しなければならない
+    -- split をしたときに winid が元のものとは別のものが割りあたっていることがあるため常に buffer 基準で winid を取得しなければならない
     local winid = utils.get_window_id(self.bufnr)
     local hidden = not vim.api.nvim_win_is_valid(winid)
 
@@ -171,11 +172,15 @@ function M.new()
     self.spin:stop()
   end
 
-  function obj._test_file_path_under_cursor(self)
-    local test_dir_path = self.test_dir_path
+  function obj._test_file_prefix(self)
     local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
     test_case = string.match(test_case, '%w+%-%d+') or ''
-    local file_path_prefix = test_dir_path .. '/' .. test_case
+    return test_case
+  end
+
+  function obj._test_file_path_under_cursor(self)
+    local test_case = obj:_test_file_prefix()
+    local file_path_prefix = vim.fs.joinpath(self.test_dir_path, test_case)
 
     return {
       input = file_path_prefix .. '.in',
@@ -183,6 +188,8 @@ function M.new()
     }
   end
 
+  ---@param input_path string
+  ---@param output_path string
   function obj._open_test_case(input_path, output_path)
     vim.cmd('split')
     vim.cmd('wincmd j')
@@ -206,21 +213,87 @@ function M.new()
     buffer = obj.bufnr,
   })
 
+  ---@param input_bufnr integer
+  ---@param output_bufnr integer
+  local function buf_config(input_bufnr, output_bufnr)
+    local ns_id = vim.api.nvim_create_namespace('atcoder_nvim_namespace')
+
+    local function close_win(buf)
+      local windows = vim.api.nvim_list_wins()
+      local result = {}
+
+      for _, win_id in ipairs(windows) do
+        if vim.api.nvim_win_get_buf(win_id) == buf then
+          vim.api.nvim_win_close(win_id, false)
+        end
+      end
+
+      -- TODO: delete buffer
+      -- if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) then
+      --   vim.cmd('bd ' .. buf)
+      -- end
+    end
+
+    local function close_wins(input_buf, output_buf)
+      obj:open()
+      local winid = utils.get_window_id(obj.bufnr)
+      vim.api.nvim_set_current_win(winid)
+
+      close_win(input_buf)
+      close_win(output_buf)
+    end
+
+    -- buffer1 の win 閉じられたときに buffer2  の win も閉じる
+    vim.api.nvim_create_autocmd('WinClosed', {
+      buffer = input_bufnr,
+      callback = function()
+        close_wins(input_bufnr, output_bufnr)
+      end,
+    })
+
+    -- buffer2 の win 閉じられたときに buffer1  の win も閉じる
+    vim.api.nvim_create_autocmd('WinClosed', {
+      buffer = output_bufnr,
+      callback = function()
+        close_wins(input_bufnr, output_bufnr)
+      end,
+    })
+
+    local bufs = {
+      { msg = 'input file', bufnr = input_bufnr },
+      { msg = 'output file', bufnr = output_bufnr },
+    }
+    for i, v in ipairs(bufs) do
+      vim.api.nvim_buf_set_extmark(v.bufnr, ns_id, 0, 0, {
+        virt_text = { { v.msg, 'Comment' } },
+        virt_text_pos = 'eol', -- 行末に表示
+      })
+      vim.api.nvim_create_autocmd({ 'InsertEnter', 'WinClosed' }, {
+        buffer = v.bufnr,
+        callback = function()
+          vim.api.nvim_buf_clear_namespace(bufs[i].bufnr, ns_id, 0, -1)
+          vim.api.nvim_buf_clear_namespace(bufs[3 - i].bufnr, ns_id, 0, -1)
+        end,
+      })
+    end
+  end
+
+  ---@param paths {input:string,output:string}
+  local function open_test_cases(paths)
+    obj._open_test_case(paths.input, paths.output)
+    local input_bufnr = vim.fn.bufnr(paths.input)
+    local output_bufnr = vim.fn.bufnr(paths.output)
+    buf_config(input_bufnr, output_bufnr)
+  end
+
   -- edit test case
   vim.keymap.set({ 'n' }, 'e', function()
-    local test_dir_path = obj.test_dir_path
-    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
-    test_case = string.match(test_case, '%w+%-%d+') or ''
-    local file_path_prefix = test_dir_path .. '/' .. test_case
-
-    local input_file_path = file_path_prefix .. '.in'
-    local output_file_path = file_path_prefix .. '.out'
-    if vim.fn.filereadable(input_file_path) == 0 or vim.fn.filereadable(output_file_path) == 0 then
+    local test_file_path = obj:_test_file_path_under_cursor()
+    if vim.fn.filereadable(test_file_path.input) == 0 or vim.fn.filereadable(test_file_path.output) == 0 then
       -- do nothing if file is not exist.
       return
     end
-
-    obj._open_test_case(input_file_path, output_file_path)
+    open_test_cases(test_file_path)
   end, {
     buffer = obj.bufnr,
   })
@@ -232,28 +305,8 @@ function M.new()
 
     local input_file_path = string.format('%s/custom-%d.in', obj.test_dir_path, id)
     local output_file_path = string.format('%s/custom-%d.out', obj.test_dir_path, id)
-    obj._open_test_case(input_file_path, output_file_path)
 
-    local input_bufnr = vim.fn.bufnr(input_file_path)
-    local output_bufnr = vim.fn.bufnr(output_file_path)
-    local ns_id = vim.api.nvim_create_namespace('atcoder_nvim_namespace')
-
-    local bufs = {
-      { msg = 'input file', bufnr = input_bufnr },
-      { msg = 'output file', bufnr = output_bufnr },
-    }
-    for _, v in ipairs(bufs) do
-      vim.api.nvim_buf_set_extmark(v.bufnr, ns_id, 0, 0, {
-        virt_text = { { v.msg, 'Comment' } },
-        virt_text_pos = 'eol', -- 行末に表示
-      })
-      vim.api.nvim_create_autocmd({ 'InsertEnter' }, {
-        buffer = v.bufnr,
-        callback = function()
-          vim.api.nvim_buf_clear_namespace(v.bufnr, ns_id, 0, -1)
-        end,
-      })
-    end
+    open_test_cases({ input = input_file_path, output = output_file_path })
   end, {
     buffer = obj.bufnr,
   })
@@ -279,25 +332,21 @@ function M.new()
         :wait()
     end
 
-    obj._open_test_case(to_path.input, to_path.output)
+    open_test_cases(to_path)
   end, {
     buffer = obj.bufnr,
   })
 
   -- delete test case
   vim.keymap.set({ 'n' }, 'D', function()
-    local test_dir_path = obj.test_dir_path
-    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
-    test_case = string.match(test_case, '%w+%-%d+') or ''
-    local file_path_prefix = test_dir_path .. '/' .. test_case
+    local test_case = obj:_test_file_prefix()
+    local test_file_path = obj:_test_file_path_under_cursor()
 
-    local input_file_path = file_path_prefix .. '.in'
-    local output_file_path = file_path_prefix .. '.out'
-    if vim.fn.filereadable(input_file_path) == 0 then
+    if vim.fn.filereadable(test_file_path.input) == 0 then
       -- do nothing if file does not exist.
       return
     end
-    for _, v in ipairs({ input_file_path, output_file_path }) do
+    for _, v in ipairs({ test_file_path.input, test_file_path.output }) do
       if vim.api.nvim_buf_is_loaded(vim.fn.bufnr(v)) then
         vim.cmd('bd ' .. v)
       end
@@ -312,8 +361,8 @@ function M.new()
       vim.system({
         'rm',
         '-f',
-        input_file_path,
-        output_file_path,
+        test_file_path.input,
+        test_file_path.output,
       }, {}, function(out)
         if out.code ~= 0 then
           vim.notify(out.stderr, vim.log.levels.ERROR)
@@ -338,21 +387,17 @@ function M.new()
 
   -- preview test case
   vim.keymap.set({ 'n' }, '<CR>', function()
-    local test_dir_path = obj.test_dir_path
-    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
-    test_case = string.match(test_case, '%w+%-%d+') or ''
-    local file_path_prefix = test_dir_path .. '/' .. test_case
+    local test_case = obj:_test_file_prefix()
+    local test_case_path = obj:_test_file_path_under_cursor()
 
-    local input_file_path = file_path_prefix .. '.in'
-    local output_file_path = file_path_prefix .. '.out'
-    if vim.fn.filereadable(input_file_path) == 0 then
+    if vim.fn.filereadable(test_case_path.input) == 0 then
       -- do nothing if file is not exist.
       return
     end
 
     vim.api.nvim_set_option_value('modifiable', true, { buf = obj.bufnr })
-    local input = vim.fn.readfile(input_file_path, 'r')
-    local output = vim.fn.readfile(output_file_path, 'r')
+    local input = vim.fn.readfile(test_case_path.input, 'r')
+    local output = vim.fn.readfile(test_case_path.output, 'r')
 
     local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
     local hidden = obj.test_case_preview_length[test_case] == nil
@@ -390,57 +435,6 @@ function M.new()
   end, {
     buffer = obj.bufnr,
   })
-
-  -- debug using test case under cursor
-  -- vim.keymap.set({ 'n' }, 'D', function()
-  --   local adapter_name = 'cppdbg'
-  --
-  --   local dap = require('dap')
-  --   if not obj.origin_dap_adapters[adapter_name] then
-  --     obj.origin_dap_adapters[adapter_name] = dap.adapters[adapter_name]
-  --   end
-  --
-  --   local origin_adapter = obj.origin_dap_adapters[adapter_name]
-  --   if origin_adapter == nil then
-  --     vim.notify('you must configure dap-adapter for cpp', vim.log.levels.ERROR)
-  --     return
-  --   end
-  --
-  --   local test_dir_path = obj.test_dir_path
-  --   local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
-  --   test_case = string.match(test_case, '%w+%-%d+') or ''
-  --   local file_path_prefix = test_dir_path .. '/' .. test_case
-  --   local input_file_path = file_path_prefix .. '.in'
-  --
-  --   if type(origin_adapter) == 'function' then
-  --     dap.adapters[adapter_name] = function(callback, config, parent)
-  --       local final_config = vim.deepcopy(config)
-  --       final_config.args = final_config.args or {}
-  --       vim.list_extend(final_config.args, '< ' .. input_file_path)
-  --       origin_adapter(callback, final_config, parent)
-  --     end
-  --   elseif type(origin_adapter) == 'table' then
-  --     local prev_enrich_config = origin_adapter.enrich_config
-  --     local adapter = vim.deepcopy(origin_adapter)
-  --     adapter.enrich_config = function(config, on_config)
-  --       local final_config = vim.deepcopy(config)
-  --       final_config.args = final_config.args or {}
-  --       vim.list_extend(final_config.args, { '<', input_file_path })
-  --       vim.print(vim.inspect(final_config))
-  --       prev_enrich_config(final_config, on_config)
-  --     end
-  --     dap.adapters[adapter_name] = adapter
-  --   else
-  --     vim.notify('invalid type adapter is registered', vim.log.levels.ERROR)
-  --     return
-  --   end
-  --
-  --   local winid = utils.get_window_id_for_file(obj.source_code)
-  --   vim.api.nvim_set_current_win(winid)
-  --   dap.continue()
-  -- end, {
-  --   buffer = obj.bufnr,
-  -- })
 
   -- debug test case under cursor
   vim.keymap.set({ 'n' }, 'd', function()
