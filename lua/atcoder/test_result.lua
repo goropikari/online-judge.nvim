@@ -123,6 +123,7 @@ function M.new()
       '  r:    rerun test cases',
       '  d:    debug test case',
       '  <CR>: view/hide test case',
+      '  a:    add test case',
       '  e:    edit test case',
       '  D:    delete test case',
       '  s:    submit',
@@ -267,8 +268,13 @@ function M.new()
     local input_file_path = file_path_prefix .. '.in'
     local output_file_path = file_path_prefix .. '.out'
     if vim.fn.filereadable(input_file_path) == 0 then
-      -- do nothing if file is not exist.
+      -- do nothing if file does not exist.
       return
+    end
+    for _, v in ipairs({ input_file_path, output_file_path }) do
+      if vim.api.nvim_buf_is_loaded(vim.fn.bufnr(v)) then
+        vim.cmd('bd ' .. v)
+      end
     end
     if string.match(test_case, '^sample%-') then
       vim.notify('could not delete sample test case', vim.log.levels.WARN)
