@@ -43,4 +43,17 @@ function M.count_custom_prefix_files(dir_path, prefix_pattern)
   return count
 end
 
+---@param bufnr integer
+function M.get_window_id(bufnr)
+  local windows = vim.api.nvim_list_wins()
+
+  for _, win_id in ipairs(windows) do
+    if vim.api.nvim_win_get_buf(win_id) == bufnr then
+      return win_id
+    end
+  end
+
+  return -1
+end
+
 return M

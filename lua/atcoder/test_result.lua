@@ -14,7 +14,6 @@ local M = {}
 ---@field register_submit_fn function
 ---
 ---@field bufnr integer
----@field winid integer
 ---@field test_case_preview_length {string:integer}
 ---@field test_case_display_length {string:integer}
 ---@field spin Spinner
@@ -47,7 +46,6 @@ function M.new()
       vim.api.nvim_set_option_value('filetype', 'atcoder', { buf = bufnr })
       return bufnr
     end)(),
-    winid = -1,
     test_case_preview_length = {},
     test_case_display_length = {},
     source_code = '',
@@ -57,12 +55,12 @@ function M.new()
   obj.spin = spinner.new(obj.bufnr)
 
   obj.open = function(self)
-    local hidden = false
-    hidden = hidden or (not vim.api.nvim_win_is_valid(self.winid))
-    hidden = hidden or vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_win_get_buf(self.winid) }) ~= 'atcoder'
+    -- split などをしたときに winid が元のものとは別のものが割りあたっていることがあるため常に buffer 基準で winid を取得しなければならない
+    local winid = utils.get_window_id(self.bufnr)
+    local hidden = not vim.api.nvim_win_is_valid(winid)
 
     if hidden then
-      self.winid = vim.api.nvim_open_win(self.bufnr, false, {
+      vim.api.nvim_open_win(self.bufnr, false, {
         split = 'right',
         width = math.floor(vim.o.columns * 0.4),
         style = 'minimal',
