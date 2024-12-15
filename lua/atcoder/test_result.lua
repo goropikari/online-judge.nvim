@@ -13,7 +13,8 @@ local M = {}
 ---@field stop_spinner function
 ---@field register_rerun_fn function
 ---@field register_submit_fn function
----@field _test_file_path function
+---@field _test_file_path_under_cursor function
+---@field _open_test_case function
 ---
 ---@field bufnr integer
 ---@field test_case_preview_length {string:integer}
@@ -125,6 +126,7 @@ function M.new()
       '  <CR>: view/hide test case',
       '  a:    add test case',
       '  e:    edit test case',
+      '  c:    copy test case',
       '  D:    delete test case',
       '  s:    submit',
       '  S:    show internal state for plugin debugging',
@@ -169,7 +171,7 @@ function M.new()
     self.spin:stop()
   end
 
-  function obj._test_file_path(self)
+  function obj._test_file_path_under_cursor(self)
     local test_dir_path = self.test_dir_path
     local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
     test_case = string.match(test_case, '%w+%-%d+') or ''
@@ -179,6 +181,16 @@ function M.new()
       input = file_path_prefix .. '.in',
       output = file_path_prefix .. '.out',
     }
+  end
+
+  function obj._open_test_case(input_path, output_path)
+    vim.cmd('split')
+    vim.cmd('wincmd j')
+    vim.cmd('edit ' .. input_path)
+    vim.cmd('split')
+    vim.cmd('wincmd j')
+    vim.cmd('edit ' .. output_path)
+    vim.cmd('wincmd k')
   end
 
   -- rerun test cases
@@ -208,31 +220,19 @@ function M.new()
       return
     end
 
-    vim.cmd('split')
-    vim.cmd('wincmd j')
-    vim.cmd('edit ' .. input_file_path)
-    vim.cmd('split')
-    vim.cmd('wincmd j')
-    vim.cmd('edit ' .. output_file_path)
-    vim.cmd('wincmd k')
+    obj._open_test_case(input_file_path, output_file_path)
   end, {
     buffer = obj.bufnr,
   })
 
   -- add test case
   vim.keymap.set({ 'n' }, 'a', function()
-    local cnt = utils.count_custom_prefix_files(obj.test_dir_path, '^custom%-')
-    cnt = cnt / 2
-    cnt = cnt + 1
-    local input_file_path = string.format('%s/custom-%d.in', obj.test_dir_path, cnt)
-    local output_file_path = string.format('%s/custom-%d.out', obj.test_dir_path, cnt)
-    vim.cmd('split')
-    vim.cmd('wincmd j')
-    vim.cmd('split')
-    vim.cmd('edit ' .. input_file_path)
-    vim.cmd('wincmd j')
-    vim.cmd('edit ' .. output_file_path)
-    vim.cmd('wincmd k')
+    local id = utils.maximum_test_id(obj.test_dir_path, 'custom')
+    id = id + 1
+
+    local input_file_path = string.format('%s/custom-%d.in', obj.test_dir_path, id)
+    local output_file_path = string.format('%s/custom-%d.out', obj.test_dir_path, id)
+    obj._open_test_case(input_file_path, output_file_path)
 
     local input_bufnr = vim.fn.bufnr(input_file_path)
     local output_bufnr = vim.fn.bufnr(output_file_path)
@@ -254,6 +254,32 @@ function M.new()
         end,
       })
     end
+  end, {
+    buffer = obj.bufnr,
+  })
+
+  -- copy test case
+  vim.keymap.set({ 'n' }, 'c', function()
+    local id = utils.maximum_test_id(obj.test_dir_path, 'custom')
+    id = id + 1
+
+    local from_path = obj:_test_file_path_under_cursor()
+    local to_path = {
+      input = string.format('%s/custom-%d.in', obj.test_dir_path, id),
+      output = string.format('%s/custom-%d.out', obj.test_dir_path, id),
+    }
+
+    for _, v in ipairs({ 'input', 'output' }) do
+      vim
+        .system({
+          'cp',
+          from_path[v],
+          to_path[v],
+        })
+        :wait()
+    end
+
+    obj._open_test_case(to_path.input, to_path.output)
   end, {
     buffer = obj.bufnr,
   })
@@ -425,7 +451,7 @@ function M.new()
     end
 
     -- window 移動する前に実行しなければならない
-    local test_file_path = obj:_test_file_path()
+    local test_file_path = obj:_test_file_path_under_cursor()
 
     local winid = utils.get_window_id_for_file(obj.source_code)
     vim.api.nvim_set_current_win(winid)

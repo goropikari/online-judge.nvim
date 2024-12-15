@@ -24,7 +24,7 @@ function M.get_absolute_path()
   return vim.fn.expand('%:p')
 end
 
-function M.count_custom_prefix_files(dir_path, prefix_pattern)
+function M.count_prefix_files(dir_path, prefix_pattern)
   local count = 0
   local dir = vim.uv.fs_scandir(dir_path)
   if not dir then
@@ -41,6 +41,32 @@ function M.count_custom_prefix_files(dir_path, prefix_pattern)
     end
   end
   return count
+end
+
+---@params dir_path string
+---@params kind 'sample'|'custom'
+---@return integer
+function M.maximum_test_id(dir_path, kind)
+  local max_id = 0
+
+  local dir = vim.uv.fs_scandir(dir_path)
+  if not dir then
+    print('Invalid path: ' .. dir_path)
+    return 0
+  end
+  while true do
+    local name, type = vim.uv.fs_scandir_next(dir)
+    if not name then
+      break
+    end
+    local id = tonumber(name:match(kind .. '%-(%d+).%w+') or '0')
+    if type == 'file' and id > 0 then
+      if max_id < id then
+        max_id = id
+      end
+    end
+  end
+  return max_id
 end
 
 ---@param bufnr integer
