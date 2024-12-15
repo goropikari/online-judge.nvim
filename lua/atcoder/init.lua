@@ -277,7 +277,7 @@ local function rerun_for_test_result_viewer(callback)
   end)
 end
 
-local function __execute_test()
+local function test()
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
     rerun_for_test_result_viewer()
     return
@@ -294,7 +294,7 @@ end
 ---@param problem_id string
 ---@param source_code string
 ---@param lang_id integer
-local function submit(contest_id, problem_id, source_code, lang_id)
+local function _submit(contest_id, problem_id, source_code, lang_id)
   local url = generate_submit_url(contest_id, problem_id)
   -- local filepath = utils.get_absolute_path()
   local file_path = source_code
@@ -344,7 +344,7 @@ local function submit(contest_id, problem_id, source_code, lang_id)
   end
 end
 
-local function _submit()
+local function submit()
   local contest_id = ''
   local problem_id = ''
   local source_code = ''
@@ -361,13 +361,13 @@ local function _submit()
     source_code = utils.get_absolute_path()
     lang_id = lang.get_option(vim.bo.filetype).id
   end
-  submit(contest_id, problem_id, source_code, lang_id)
+  _submit(contest_id, problem_id, source_code, lang_id)
 end
 
 local function setup_cmds()
   local fns = {
-    test = __execute_test,
-    submit = _submit,
+    test = test,
+    submit = submit,
     download_tests = function()
       download_tests(false)
     end,
@@ -375,7 +375,11 @@ local function setup_cmds()
       state.db:update_contest_data()
     end,
     login = auth.login,
+    open_database = function()
+      state.db:open()
+    end,
   }
+
   vim.api.nvim_create_user_command('AtCoder', function(opts)
     fns[opts.args]()
   end, {
@@ -386,6 +390,7 @@ local function setup_cmds()
         'download_test',
         'login',
         'update_contest_data',
+        'open_database',
       }
     end,
     nargs = 1,
@@ -402,7 +407,7 @@ function M.setup(opts)
 
   state.test_result_viewer = test_result.new()
   state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
-  state.test_result_viewer:register_submit_fn(_submit)
+  state.test_result_viewer:register_submit_fn(submit)
   if config.define_cmds then
     setup_cmds()
   end
@@ -413,15 +418,13 @@ M.update_contest_data = function()
 end
 M._download_tests = _download_tests
 M.download_tests = download_tests
-M.execute_test = execute_test
-M._execute_test = _execute_test
+M.test = test
 M.login = auth.login
 M.submit = submit
 M.open_database = function()
   state.db:open()
 end
 
-vim.keymap.set({ 'n' }, '<leader>at', __execute_test, { desc = 'atcoder: test sample cases' })
-vim.keymap.set({ 'n' }, '<leader>ad', download_tests, { desc = 'atcoder: download sample test cases' })
+vim.keymap.set({ 'n' }, '<leader>at', test, { desc = 'atcoder: test sample cases' })
 
 return M
