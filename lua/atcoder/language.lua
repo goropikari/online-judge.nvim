@@ -16,6 +16,7 @@ local M = {}
 ---@field input_test_file_path string
 
 -- language id は提出ページの HTML source を見て言語の対応表から探るしか方法はなさそう
+---@type {string:LanguageOption}
 local lang = {
   cpp = {
     ---@param cfg BuildConfig
@@ -38,7 +39,7 @@ local lang = {
           '-o',
           exec_path,
           file_path,
-        }, { text = true }, function(out)
+        }, { text = true }, function(_)
           if type(callback) == 'function' then
             callback(cfg)
           end
@@ -74,8 +75,22 @@ local lang = {
   },
   python = {
     build = nil, -- use default fn
-    cmd = function(cfg)
+    command = function(cfg)
       return 'python3 ' .. cfg.source_code
+    end,
+    dap_config = function(cfg)
+      vim.print(cfg)
+      return {
+        type = 'python',
+        request = 'launch',
+        name = 'python debug for atcoder',
+        program = cfg.source_code_path,
+        args = { cfg.input_test_file_path },
+        -- 第一引数を stdin にいれることを前提としている。次のコードを input より前にいれる必要がある
+        -- import sys
+        -- if len(sys.argv) == 2:
+        --     sys.stdin = open(sys.argv[1])
+      }
     end,
     id = 5078, -- pypy3
   },
@@ -85,6 +100,7 @@ local lang = {
 ---@return LanguageOption
 function M.get_option(filetype)
   filetype = filetype or vim.bo.filetype
+
   local cfg = lang[filetype]
   cfg.build = cfg.build or function(config, callback)
     if type(callback) == 'function' then
