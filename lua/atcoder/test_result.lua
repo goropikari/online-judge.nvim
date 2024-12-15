@@ -12,20 +12,23 @@ local M = {}
 ---@field stop_spinner function
 ---@field register_rerun_fn function
 ---@field register_submit_fn function
+---@field _test_file_path function
 ---
 ---@field bufnr integer
 ---@field test_case_preview_length {string:integer}
 ---@field test_case_display_length {string:integer}
+---@field origin_dap_adapters {string:dap.Adapter}
 ---@field spin Spinner
+---@field rerun_fn function
+---@field submit_fn function
+---
 ---@field source_code string
 ---@field command string
 ---@field test_dir_path string
 ---@field filetype string
+---@field lang_id integer
 ---@field contest_id? string
 ---@field problem_id? string
----@field lang_id integer
----@field rerun_fn function
----@field submit_fn function
 
 ---@class TestResult
 ---@field source_code string
@@ -51,6 +54,7 @@ function M.new()
     source_code = '',
     command = '',
     test_dir_path = '',
+    origin_dap_adapters = {},
   }
   obj.spin = spinner.new(obj.bufnr)
 
@@ -116,6 +120,7 @@ function M.new()
       '',
       'help',
       '  r:    rerun test cases',
+      '  D:    debug test case',
       '  e:    edit test case',
       '  a:    add test case',
       '  d:    delete test case',
@@ -161,6 +166,18 @@ function M.new()
   end
   function obj.stop_spinner(self)
     self.spin:stop()
+  end
+
+  function obj._test_file_path(self)
+    local test_dir_path = self.test_dir_path
+    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
+    test_case = string.match(test_case, '%w+%-%d+') or ''
+    local file_path_prefix = test_dir_path .. '/' .. test_case
+
+    return {
+      input = file_path_prefix .. '.in',
+      output = file_path_prefix .. '.out',
+    }
   end
 
   -- rerun test cases
@@ -338,6 +355,84 @@ function M.new()
       obj.test_case_preview_length[test_case] = nil
     end
     vim.api.nvim_set_option_value('modifiable', false, { buf = obj.bufnr })
+  end, {
+    buffer = obj.bufnr,
+  })
+
+  -- debug using test case under cursor
+  -- vim.keymap.set({ 'n' }, 'D', function()
+  --   local adapter_name = 'cppdbg'
+  --
+  --   local dap = require('dap')
+  --   if not obj.origin_dap_adapters[adapter_name] then
+  --     obj.origin_dap_adapters[adapter_name] = dap.adapters[adapter_name]
+  --   end
+  --
+  --   local origin_adapter = obj.origin_dap_adapters[adapter_name]
+  --   if origin_adapter == nil then
+  --     vim.notify('you must configure dap-adapter for cpp', vim.log.levels.ERROR)
+  --     return
+  --   end
+  --
+  --   local test_dir_path = obj.test_dir_path
+  --   local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
+  --   test_case = string.match(test_case, '%w+%-%d+') or ''
+  --   local file_path_prefix = test_dir_path .. '/' .. test_case
+  --   local input_file_path = file_path_prefix .. '.in'
+  --
+  --   if type(origin_adapter) == 'function' then
+  --     dap.adapters[adapter_name] = function(callback, config, parent)
+  --       local final_config = vim.deepcopy(config)
+  --       final_config.args = final_config.args or {}
+  --       vim.list_extend(final_config.args, '< ' .. input_file_path)
+  --       origin_adapter(callback, final_config, parent)
+  --     end
+  --   elseif type(origin_adapter) == 'table' then
+  --     local prev_enrich_config = origin_adapter.enrich_config
+  --     local adapter = vim.deepcopy(origin_adapter)
+  --     adapter.enrich_config = function(config, on_config)
+  --       local final_config = vim.deepcopy(config)
+  --       final_config.args = final_config.args or {}
+  --       vim.list_extend(final_config.args, { '<', input_file_path })
+  --       vim.print(vim.inspect(final_config))
+  --       prev_enrich_config(final_config, on_config)
+  --     end
+  --     dap.adapters[adapter_name] = adapter
+  --   else
+  --     vim.notify('invalid type adapter is registered', vim.log.levels.ERROR)
+  --     return
+  --   end
+  --
+  --   local winid = utils.get_window_id_for_file(obj.source_code)
+  --   vim.api.nvim_set_current_win(winid)
+  --   dap.continue()
+  -- end, {
+  --   buffer = obj.bufnr,
+  -- })
+
+  -- debug using test case under cursor
+  vim.keymap.set({ 'n' }, 'D', function()
+    local ok, dap = pcall(require, 'dap')
+    if not ok then
+      vim.notify('nvim-dap is required', vim.log.levels.ERROR)
+      return
+    end
+
+    -- window 移動する前に実行しなければならない
+    local test_file_path = obj:_test_file_path()
+
+    local winid = utils.get_window_id_for_file(obj.source_code)
+    vim.api.nvim_set_current_win(winid)
+
+    dap.run({
+      name = 'debug for atcoder',
+      type = 'cppdbg',
+      request = 'launch',
+      program = obj.command,
+      cwd = vim.fn.fnamemodify(obj.source_code, ':h'),
+      args = { '<', test_file_path.input },
+      build = { 'g++', '-g', '-O0', obj.source_code, '-o', obj.command },
+    })
   end, {
     buffer = obj.bufnr,
   })

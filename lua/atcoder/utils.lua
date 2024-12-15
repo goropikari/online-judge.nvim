@@ -56,4 +56,10 @@ function M.get_window_id(bufnr)
   return -1
 end
 
+---@param filepath string
+function M.get_window_id_for_file(filepath)
+  local bufnr = vim.fn.bufnr(filepath)
+  return M.get_window_id(bufnr)
+end
+
 return M
