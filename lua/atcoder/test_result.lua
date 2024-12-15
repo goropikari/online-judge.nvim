@@ -121,7 +121,7 @@ function M.new()
       '  d:    delete test case',
       '  <CR>: view/hide test case',
       '  s:    submit',
-      '  D:    debug log',
+      '  S:    show internal state',
       '',
     }, lines)
     vim.api.nvim_set_option_value('modifiable', true, { buf = self.bufnr })
@@ -342,8 +342,8 @@ function M.new()
     buffer = obj.bufnr,
   })
 
-  -- debug log
-  vim.keymap.set({ 'n' }, 'D', function()
+  -- show internal state
+  vim.keymap.set({ 'n' }, 'S', function()
     vim.print(vim.inspect(obj))
     vim.cmd('mess')
   end, {
