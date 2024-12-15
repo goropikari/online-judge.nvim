@@ -308,35 +308,25 @@ local function _submit(contest_id, problem_id, source_code, lang_id)
       end
     end
 
-    curl.head({
-      url = url,
-      timeout = 500,
-      callback = function(res)
-        if res.status ~= 200 then
-          vim.notify(vim.inspect(res))
-          return
-        end
-        vim.notify('submit: ' .. url)
-
-        async.void(function()
-          local out = system({
-            'oj',
-            'submit',
-            '-y',
-            '-l',
-            lang_id,
-            url,
-            file_path,
-          })
-          if out.code ~= 0 then
-            vim.notify(out.stdout, vim.log.levels.ERROR)
-            vim.notify(out.stderr, vim.log.levels.ERROR)
-          end
-          vim.notify(out.stdout)
-        end)()
-      end,
-    })
+    async.void(function()
+      vim.notify('submit: ' .. url)
+      local out = system({
+        'oj',
+        'submit',
+        '-y',
+        '-l',
+        lang_id,
+        url,
+        file_path,
+      })
+      if out.code ~= 0 then
+        vim.notify(out.stdout, vim.log.levels.ERROR)
+        vim.notify(out.stderr, vim.log.levels.ERROR)
+      end
+      vim.notify(out.stdout)
+    end)()
   end
+
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
     rerun_for_test_result_viewer(callback)
   else
