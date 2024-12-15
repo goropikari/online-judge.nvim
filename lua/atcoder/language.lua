@@ -5,10 +5,15 @@ local M = {}
 ---@class LanguageOption
 ---@field build fun(cfg:BuildConfig, callback:function)
 ---@field command fun(cfg:BuildConfig): string
+---@field dap_config fun(cfg:DebugConfig): table
 ---@field id integer
 
 ---@class BuildConfig
 ---@field source_code string
+
+---@class DebugConfig
+---@field source_code_path string
+---@field input_test_file_path string
 
 -- language id は提出ページの HTML source を見て言語の対応表から探るしか方法はなさそう
 local lang = {
@@ -52,6 +57,19 @@ local lang = {
       local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
       return exec_path
     end,
+    ---@param cfg DebugConfig
+    dap_config = function(cfg)
+      local executable = vim.fn.fnamemodify(cfg.source_code_path, ':r')
+      return {
+        name = 'debug for atcoder',
+        type = 'cppdbg',
+        request = 'launch',
+        program = executable,
+        cwd = vim.fn.fnamemodify(cfg.source_code_path, ':h'),
+        args = { '<', cfg.input_test_file_path },
+        build = { 'g++', '-g', '-O0', cfg.source_code_path, '-o', executable },
+      }
+    end,
     id = 5028, -- C++ 23
   },
   python = {
@@ -76,6 +94,7 @@ function M.get_option(filetype)
   return {
     build = cfg.build,
     command = cfg.command,
+    dap_config = cfg.dap_config,
     id = cfg.id,
   }
 end

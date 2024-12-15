@@ -1,3 +1,4 @@
+local lang = require('atcoder.language')
 local spinner = require('atcoder.spinner')
 local utils = require('atcoder.utils')
 
@@ -122,7 +123,6 @@ function M.new()
       '  r:    rerun test cases',
       '  d:    debug test case',
       '  <CR>: view/hide test case',
-      '  a:    add test case',
       '  e:    edit test case',
       '  D:    delete test case',
       '  s:    submit',
@@ -410,7 +410,7 @@ function M.new()
   --   buffer = obj.bufnr,
   -- })
 
-  -- debug using test case under cursor
+  -- debug test case under cursor
   vim.keymap.set({ 'n' }, 'd', function()
     local ok, dap = pcall(require, 'dap')
     if not ok then
@@ -424,15 +424,11 @@ function M.new()
     local winid = utils.get_window_id_for_file(obj.source_code)
     vim.api.nvim_set_current_win(winid)
 
-    dap.run({
-      name = 'debug for atcoder',
-      type = 'cppdbg',
-      request = 'launch',
-      program = obj.command,
-      cwd = vim.fn.fnamemodify(obj.source_code, ':h'),
-      args = { '<', test_file_path.input },
-      build = { 'g++', '-g', '-O0', obj.source_code, '-o', obj.command },
+    local dap_config = lang.get_option(obj.filetype).dap_config({
+      source_code_path = obj.source_code,
+      input_test_file_path = test_file_path.input,
     })
+    dap.run(dap_config)
   end, {
     buffer = obj.bufnr,
   })
