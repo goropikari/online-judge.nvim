@@ -1,4 +1,5 @@
 local spinner = require('atcoder.spinner')
+local utils = require('atcoder.utils')
 
 local M = {}
 
@@ -14,7 +15,8 @@ local M = {}
 ---
 ---@field bufnr integer
 ---@field winid integer
----@field test_cases {string:integer}
+---@field test_case_preview_length {string:integer}
+---@field test_case_display_length {string:integer}
 ---@field spin Spinner
 ---@field source_code string
 ---@field command string
@@ -46,7 +48,8 @@ function M.new()
       return bufnr
     end)(),
     winid = -1,
-    test_cases = {},
+    test_case_preview_length = {},
+    test_case_display_length = {},
     source_code = '',
     command = '',
     test_dir_path = '',
@@ -68,7 +71,7 @@ function M.new()
   end
 
   obj.reset_test_cases = function(self)
-    self.test_cases = {}
+    self.test_case_preview_length = {}
   end
 
   ---@param test_result TestResult
@@ -88,6 +91,24 @@ function M.new()
       line = line:gsub('^custom%-', '▷ custom%-')
       lines[i] = line
     end
+
+    local cnt = 1
+    local prev_file = ''
+    for _, v in ipairs(lines) do
+      local match_str = string.match(v, 'sample%-%d+$') or string.match(v, 'custom%-%d+$')
+      if match_str then
+        self.test_case_display_length[prev_file] = cnt
+        prev_file = match_str
+        cnt = 0
+      elseif string.match(v, '^slowest') then
+        break
+      else
+        cnt = cnt + 1
+      end
+    end
+    self.test_case_display_length[prev_file] = cnt
+    self.test_case_display_length[''] = nil
+
     lines = vim.list_extend({
       'contest_id: ' .. (test_result.contest_id or ''),
       'problem_id: ' .. (test_result.problem_id or ''),
@@ -98,9 +119,11 @@ function M.new()
       'help',
       '  r:    rerun test cases',
       '  e:    edit test case',
+      '  a:    add test case',
+      '  d:    delete test case',
       '  <CR>: view/hide test case',
       '  s:    submit',
-      '  d:    debug log',
+      '  D:    debug log',
       '',
     }, lines)
     vim.api.nvim_set_option_value('modifiable', true, { buf = self.bufnr })
@@ -131,6 +154,7 @@ function M.new()
       contest_id = self.contest_id,
       problem_id = self.problem_id,
       filetype = self.filetype,
+      lang_id = self.lang_id,
     }
   end
 
@@ -168,11 +192,99 @@ function M.new()
       return
     end
 
-    vim.cmd('vsplit')
+    vim.cmd('split')
+    vim.cmd('wincmd j')
+    vim.cmd('edit ' .. input_file_path)
+    vim.cmd('split')
+    vim.cmd('wincmd j')
+    vim.cmd('edit ' .. output_file_path)
+    vim.cmd('wincmd k')
+  end, {
+    buffer = obj.bufnr,
+  })
+
+  -- add test case
+  vim.keymap.set({ 'n' }, 'a', function()
+    local cnt = utils.count_custom_prefix_files(obj.test_dir_path, '^custom%-')
+    cnt = cnt / 2
+    cnt = cnt + 1
+    local input_file_path = string.format('%s/custom-%d.in', obj.test_dir_path, cnt)
+    local output_file_path = string.format('%s/custom-%d.out', obj.test_dir_path, cnt)
+    vim.cmd('split')
+    vim.cmd('wincmd j')
     vim.cmd('split')
     vim.cmd('edit ' .. input_file_path)
     vim.cmd('wincmd j')
     vim.cmd('edit ' .. output_file_path)
+    vim.cmd('wincmd k')
+
+    local input_bufnr = vim.fn.bufnr(input_file_path)
+    local output_bufnr = vim.fn.bufnr(output_file_path)
+    local ns_id = vim.api.nvim_create_namespace('atcoder_nvim_namespace')
+
+    local bufs = {
+      { msg = 'input file', bufnr = input_bufnr },
+      { msg = 'output file', bufnr = output_bufnr },
+    }
+    for _, v in ipairs(bufs) do
+      vim.api.nvim_buf_set_extmark(v.bufnr, ns_id, 0, 0, {
+        virt_text = { { v.msg, 'Comment' } },
+        virt_text_pos = 'eol', -- 行末に表示
+      })
+      vim.api.nvim_create_autocmd({ 'InsertEnter' }, {
+        buffer = v.bufnr,
+        callback = function()
+          vim.api.nvim_buf_clear_namespace(v.bufnr, ns_id, 0, -1)
+        end,
+      })
+    end
+  end, {
+    buffer = obj.bufnr,
+  })
+
+  -- delete test case
+  vim.keymap.set({ 'n' }, 'd', function()
+    local test_dir_path = obj.test_dir_path
+    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
+    test_case = string.match(test_case, '%w+%-%d+') or ''
+    local file_path_prefix = test_dir_path .. '/' .. test_case
+
+    local input_file_path = file_path_prefix .. '.in'
+    local output_file_path = file_path_prefix .. '.out'
+    if vim.fn.filereadable(input_file_path) == 0 then
+      -- do nothing if file is not exist.
+      return
+    end
+    if string.match(test_case, '^sample%-') then
+      vim.notify('could not delete sample test case', vim.log.levels.WARN)
+      return
+    end
+    local remove = vim.fn.input('remove test case [y/N]')
+    local yes = { yes = true, y = true }
+    if yes[string.lower(remove)] then
+      vim.system({
+        'rm',
+        '-f',
+        input_file_path,
+        output_file_path,
+      }, {}, function(out)
+        if out.code ~= 0 then
+          vim.notify(out.stderr, vim.log.levels.ERROR)
+          return
+        end
+
+        vim.schedule(function()
+          vim.api.nvim_set_option_value('modifiable', true, { buf = obj.bufnr })
+          local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
+          row = row - 1
+          local delete_num_lines = (obj.test_case_preview_length[test_case] or 0) + obj.test_case_display_length[test_case] + 1
+          vim.api.nvim_buf_set_lines(obj.bufnr, row, row + delete_num_lines, false, {})
+          obj.test_case_preview_length[test_case] = nil
+          obj.test_case_display_length[test_case] = nil
+          vim.api.nvim_set_option_value('modifiable', false, { buf = obj.bufnr })
+        end)
+      end)
+    end
   end, {
     buffer = obj.bufnr,
   })
@@ -196,12 +308,12 @@ function M.new()
     local output = vim.fn.readfile(output_file_path, 'r')
 
     local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
-    local hidden = obj.test_cases[test_case] == nil
+    local hidden = obj.test_case_preview_length[test_case] == nil
     if hidden then
       local line = vim.api.nvim_buf_get_lines(obj.bufnr, row - 1, row, false)[1]
       line = line:gsub('▷ ', '▽ ')
       vim.api.nvim_buf_set_lines(obj.bufnr, row - 1, row, false, { line })
-      obj.test_cases[test_case] = #input + #output + 4 -- 4 = input, newline, output, newline
+      obj.test_case_preview_length[test_case] = #input + #output + 4 -- 4 = input, newline, output, newline
       vim.api.nvim_buf_set_lines(
         obj.bufnr,
         row,
@@ -223,17 +335,17 @@ function M.new()
       local line = vim.api.nvim_buf_get_lines(obj.bufnr, row - 1, row, false)[1]
       line = line:gsub('▽ ', '▷ ')
       vim.api.nvim_buf_set_lines(obj.bufnr, row - 1, row, false, { line })
-      local delete_num_lines = obj.test_cases[test_case]
+      local delete_num_lines = obj.test_case_preview_length[test_case]
       vim.api.nvim_buf_set_lines(obj.bufnr, row, row + delete_num_lines, false, {})
-      obj.test_cases[test_case] = nil
+      obj.test_case_preview_length[test_case] = nil
     end
     vim.api.nvim_set_option_value('modifiable', false, { buf = obj.bufnr })
   end, {
     buffer = obj.bufnr,
   })
 
-  -- debug
-  vim.keymap.set({ 'n' }, 'd', function()
+  -- debug log
+  vim.keymap.set({ 'n' }, 'D', function()
     vim.print(vim.inspect(obj))
     vim.cmd('mess')
   end, {

@@ -24,4 +24,23 @@ function M.get_absolute_path()
   return vim.fn.expand('%:p')
 end
 
+function M.count_custom_prefix_files(dir_path, prefix_pattern)
+  local count = 0
+  local dir = vim.uv.fs_scandir(dir_path)
+  if not dir then
+    print('Invalid path: ' .. dir_path)
+    return 0
+  end
+  while true do
+    local name, type = vim.uv.fs_scandir_next(dir)
+    if not name then
+      break
+    end
+    if type == 'file' and name:match(prefix_pattern) then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 return M
