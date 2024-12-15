@@ -4,7 +4,7 @@ local M = {}
 
 ---@class LanguageOption
 ---@field build fun(cfg:BuildConfig, callback:function)
----@field cmd fun(cfg:BuildConfig): string
+---@field command fun(cfg:BuildConfig): string
 ---@field id integer
 
 ---@class BuildConfig
@@ -45,7 +45,7 @@ local lang = {
       end
     end,
     ---@param cfg BuildConfig
-    cmd = function(cfg)
+    command = function(cfg)
       local file_path = cfg.source_code
       local outdir = '/tmp/atcoder.nvim/' .. vim.fn.fnamemodify(file_path, ':h:t')
       vim.fn.mkdir(outdir, 'p')
@@ -74,9 +74,9 @@ function M.get_option(filetype)
     end
   end
   return {
-    cfg.build,
-    cfg.cmd,
-    cfg.id,
+    build = cfg.build,
+    command = cfg.command,
+    id = cfg.id,
   }
 end
 

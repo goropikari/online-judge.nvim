@@ -180,7 +180,11 @@ end
 -- execute callback if pass the tests
 local function execute_test(callback)
   callback = callback or nopfn
-  local build_fn, cmd_fn, lang_id = unpack(lang.get_option())
+  local lang_opt = lang.get_option()
+  local build_fn = lang_opt.build
+  local cmd_fn = lang_opt.command
+  local lang_id = lang_opt.id
+
   local source_code = utils.get_absolute_path()
   local test_dirname = get_test_dirname()
   ---@class TestContext: BuildConfig
@@ -233,7 +237,10 @@ local function rerun_for_test_result_viewer(callback)
   local source_code = cfg.source_code
   local command = cfg.command
 
-  local build_fn, _, lang_id = unpack(lang.get_option(filetype))
+  local lang_opt = lang.get_option(filetype)
+  local build_fn = lang_opt.build
+  local lang_id = lang_opt.id
+
   local ctx = {
     source_code = source_code,
     test_dirname = test_dirname,
@@ -352,7 +359,7 @@ local function _submit()
     contest_id = get_contest_id()
     problem_id = get_problem_id(contest_id) or error('failed to get problem_id')
     source_code = utils.get_absolute_path()
-    lang_id = lang.get_option(vim.bo.filetype)[3]
+    lang_id = lang.get_option(vim.bo.filetype).id
   end
   submit(contest_id, problem_id, source_code, lang_id)
 end

@@ -120,13 +120,13 @@ function M.new()
       '',
       'help',
       '  r:    rerun test cases',
-      '  D:    debug test case',
-      '  e:    edit test case',
-      '  a:    add test case',
-      '  d:    delete test case',
+      '  d:    debug test case',
       '  <CR>: view/hide test case',
+      '  a:    add test case',
+      '  e:    edit test case',
+      '  D:    delete test case',
       '  s:    submit',
-      '  S:    show internal state',
+      '  S:    show internal state for plugin debugging',
       '',
     }, lines)
     vim.api.nvim_set_option_value('modifiable', true, { buf = self.bufnr })
@@ -258,7 +258,7 @@ function M.new()
   })
 
   -- delete test case
-  vim.keymap.set({ 'n' }, 'd', function()
+  vim.keymap.set({ 'n' }, 'D', function()
     local test_dir_path = obj.test_dir_path
     local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
     test_case = string.match(test_case, '%w+%-%d+') or ''
@@ -411,7 +411,7 @@ function M.new()
   -- })
 
   -- debug using test case under cursor
-  vim.keymap.set({ 'n' }, 'D', function()
+  vim.keymap.set({ 'n' }, 'd', function()
     local ok, dap = pcall(require, 'dap')
     if not ok then
       vim.notify('nvim-dap is required', vim.log.levels.ERROR)
