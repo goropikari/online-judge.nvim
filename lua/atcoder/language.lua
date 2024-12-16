@@ -30,7 +30,6 @@ local lang = {
       local exec_timestamp = utils.get_file_timestamp(exec_path)
 
       if exec_timestamp == nil or file_timestamp > exec_timestamp then
-        vim.notify('compiling')
         vim.fn.mkdir(outdir, 'p')
         vim.system({
           'g++',

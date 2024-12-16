@@ -88,4 +88,11 @@ function M.get_window_id_for_file(filepath)
   return M.get_window_id(bufnr)
 end
 
+-- default の vim.notify は非同期処理の中で呼べない
+function M.notify(msg, levels, opts)
+  vim.schedule(function()
+    vim.notify(msg, levels, opts)
+  end)
+end
+
 return M

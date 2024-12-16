@@ -1,4 +1,6 @@
 local async = require('plenary.async')
+local utils = require('atcoder.utils')
+
 local system = async.wrap(vim.system, 3)
 
 local M = {}
@@ -25,7 +27,7 @@ function M.new()
         database_path,
       })
       if out.code ~= 0 then
-        vim.notify(out.stderr, vim.log.levels.WARN)
+        utils.notify(out.stderr, vim.log.levels.WARN)
         return
       end
 
@@ -38,7 +40,7 @@ function M.new()
         -- problems.json,
       })
       if get_res.code ~= 0 then
-        vim.notify(get_res.stderr, vim.log.levels.WARN)
+        utils.notify(get_res.stderr, vim.log.levels.WARN)
         return
       end
 
@@ -50,7 +52,7 @@ function M.new()
         stdin = get_res.stdout,
       })
       if json_to_csv_res.code ~= 0 then
-        vim.notify(json_to_csv_res.stderr, vim.log.levels.WARN)
+        utils.notify(json_to_csv_res.stderr, vim.log.levels.WARN)
         return
       end
 
@@ -69,9 +71,9 @@ function M.new()
         '.import ' .. problems_csv .. ' problems',
       })
       if import_csv_res.code ~= 0 then
-        vim.notify(import_csv_res.stderr, vim.log.levels.WARN)
+        utils.notify(import_csv_res.stderr, vim.log.levels.WARN)
       end
-      vim.notify('finish updating atcoder.db')
+      utils.notify('finish updating atcoder.db')
     end)()
   end
 
@@ -85,7 +87,7 @@ function M.new()
       })
       :wait()
     if res.code ~= 0 then
-      vim.notify('failed to read database: ' .. contest_id, vim.log.levels.WARN)
+      utils.notify('failed to read database: ' .. contest_id, vim.log.levels.WARN)
       return false
     end
 
@@ -102,7 +104,7 @@ function M.new()
       })
       :wait()
     if out.code ~= 0 then
-      vim.notify('failed to read database: ' .. contest_id, vim.log.levels.WARN)
+      utils.notify('failed to read database: ' .. contest_id, vim.log.levels.WARN)
       return nil
     end
 

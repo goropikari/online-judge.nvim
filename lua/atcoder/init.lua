@@ -1,12 +1,11 @@
 require('atcoder.cmds')
-local utils = require('atcoder.utils')
 local auth = require('atcoder.auth')
 local database = require('atcoder.database')
-local test_result = require('atcoder.test_result')
 local lang = require('atcoder.language')
+local test_result = require('atcoder.test_result')
+local utils = require('atcoder.utils')
 
 local async = require('plenary.async')
-local curl = require('plenary.curl')
 local system = async.wrap(function(cmd, callback)
   vim.system(cmd, { text = true }, callback)
 end, 2)
@@ -56,7 +55,7 @@ local function get_contest_id()
 
   -- local found = state.db:exist_contest_id(id)
   -- if not found then
-  --   vim.notify('invalid contest_id: ' .. id, vim.log.levels.ERROR)
+  --   utils.notify('invalid contest_id: ' .. id, vim.log.levels.ERROR)
   --   return ''
   -- end
 
@@ -83,7 +82,7 @@ end
 
 local function _download_tests(contest_id, problem_id, test_dirname, include_system, callback)
   if vim.fn.isdirectory(test_dirname) == 1 then
-    vim.notify('test files are already downloaded')
+    utils.notify('test files are already downloaded')
     if type(callback) == 'function' then
       callback({
         contest_id = contest_id,
@@ -96,7 +95,7 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
   contest_id = contest_id or ''
   problem_id = problem_id or ''
   if contest_id == '' or problem_id == '' then
-    vim.notify('contest_id or problem_id is empty: contest_id = ' .. contest_id .. ', problem_id = ' .. problem_id, vim.log.levels.ERROR)
+    utils.notify('contest_id or problem_id is empty: contest_id = ' .. contest_id .. ', problem_id = ' .. problem_id, vim.log.levels.ERROR)
     return
   end
   local cmd = {
@@ -118,10 +117,10 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
     local out = system(cmd)
     if out.code ~= 0 then
       -- oj の log は stdout に出る
-      vim.notify(out.stdout, vim.log.levels.ERROR)
+      utils.notify(out.stdout, vim.log.levels.ERROR)
       return
     end
-    vim.notify('Download tests of ' .. problem_id .. ': ' .. test_dirname)
+    utils.notify('Download tests of ' .. problem_id .. ': ' .. test_dirname)
 
     if type(callback) == 'function' then
       callback({
@@ -309,7 +308,7 @@ local function _submit(contest_id, problem_id, source_code, lang_id)
     end
 
     async.void(function()
-      vim.notify('submit: ' .. url)
+      utils.notify('submit: ' .. url)
       local out = system({
         'oj',
         'submit',
@@ -320,10 +319,10 @@ local function _submit(contest_id, problem_id, source_code, lang_id)
         file_path,
       })
       if out.code ~= 0 then
-        vim.notify(out.stdout, vim.log.levels.ERROR)
-        vim.notify(out.stderr, vim.log.levels.ERROR)
+        utils.notify(out.stdout, vim.log.levels.ERROR)
+        utils.notify(out.stderr, vim.log.levels.ERROR)
       end
-      vim.notify(out.stdout)
+      utils.notify(out.stdout)
     end)()
   end
 

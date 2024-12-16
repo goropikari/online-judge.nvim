@@ -352,7 +352,7 @@ function M.new()
       end
     end
     if string.match(test_case, '^sample%-') then
-      vim.notify('could not delete sample test case', vim.log.levels.WARN)
+      utils.notify('could not delete sample test case', vim.log.levels.WARN)
       return
     end
     local remove = vim.fn.input('remove test case [y/N]')
@@ -365,7 +365,7 @@ function M.new()
         test_file_path.output,
       }, {}, function(out)
         if out.code ~= 0 then
-          vim.notify(out.stderr, vim.log.levels.ERROR)
+          utils.notify(out.stderr, vim.log.levels.ERROR)
           return
         end
 
@@ -440,7 +440,7 @@ function M.new()
   vim.keymap.set({ 'n' }, 'd', function()
     local ok, dap = pcall(require, 'dap')
     if not ok then
-      vim.notify('nvim-dap is required', vim.log.levels.ERROR)
+      utils.notify('nvim-dap is required', vim.log.levels.ERROR)
       return
     end
 
