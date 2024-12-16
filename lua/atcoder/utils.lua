@@ -43,8 +43,8 @@ function M.count_prefix_files(dir_path, prefix_pattern)
   return count
 end
 
----@params dir_path string
----@params kind 'sample'|'custom'
+---@param dir_path string
+---@param kind 'sample'|'custom'
 ---@return integer
 function M.maximum_test_id(dir_path, kind)
   local max_id = 0

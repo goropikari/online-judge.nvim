@@ -95,7 +95,7 @@ local lang = {
   },
 }
 
----@params filetype string|nil
+---@param filetype string|nil
 ---@return LanguageOption
 function M.get_option(filetype)
   filetype = filetype or vim.bo.filetype
