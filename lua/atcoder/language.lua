@@ -33,7 +33,7 @@ local lang = {
         vim.fn.mkdir(outdir, 'p')
         vim.system({
           'g++',
-          '-std=gnu++20',
+          '-std=gnu++23',
           '-O2',
           '-o',
           exec_path,
