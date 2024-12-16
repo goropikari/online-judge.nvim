@@ -300,7 +300,7 @@ local function _submit(contest_id, problem_id, source_code, lang_id)
 
   local callback = function()
     if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
-      local confirm = vim.fn.input('submit [y/N]')
+      local confirm = vim.fn.input('submit [y/N]: ')
       confirm = string.lower(confirm)
       if not ({ yes = true, y = true })[confirm] then
         return

@@ -10,9 +10,9 @@ function M.login()
       'oj',
       'login',
       '-u',
-      vim.fn.input('username'),
+      vim.fn.input('username: '),
       '-p',
-      vim.fn.inputsecret('password'),
+      vim.fn.inputsecret('password: '),
       'https://atcoder.jp',
     }
 

@@ -355,7 +355,7 @@ function M.new()
       utils.notify('could not delete sample test case', vim.log.levels.WARN)
       return
     end
-    local remove = vim.fn.input('remove test case [y/N]')
+    local remove = vim.fn.input('remove test case [y/N]: ')
     local yes = { yes = true, y = true }
     if yes[string.lower(remove)] then
       vim.system({
