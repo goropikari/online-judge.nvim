@@ -285,7 +285,7 @@ local function test()
 end
 
 ---@return string
-local function generate_submit_url(contest_id, problem_id)
+local function generate_problem_url(contest_id, problem_id)
   return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
 end
 
@@ -294,7 +294,7 @@ end
 ---@param source_code string
 ---@param lang_id integer
 local function _submit(contest_id, problem_id, source_code, lang_id)
-  local url = generate_submit_url(contest_id, problem_id)
+  local url = generate_problem_url(contest_id, problem_id)
   -- local filepath = utils.get_absolute_path()
   local file_path = source_code
 
