@@ -153,14 +153,16 @@ local function _execute_test(test_dir_path, source_code, command, callback)
       '--error',
       '1e-6',
       '--tle',
-      5,
-      '--mle',
-      1024,
+      '5',
       '--directory',
       test_dir_path,
       '-c',
       command,
     }
+    if vim.fn.executable('time') == 1 then
+      vim.list_extend(cmd, { '--mle', '1024' })
+    end
+    vim.print(cmd)
     local out = system(cmd)
     vim.schedule(function()
       callback = callback or nopfn
