@@ -1,4 +1,3 @@
-require('atcoder.cmds')
 local auth = require('atcoder.auth')
 local config = require('atcoder.config')
 local oj = config.oj
