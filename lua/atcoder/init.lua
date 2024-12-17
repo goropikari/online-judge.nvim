@@ -369,7 +369,7 @@ function M.setup(opts)
   local cfg = config.get()
 
   if vim.fn.executable(oj()) == 0 then
-    vim.notify(
+    utils.notify(
       vim.fn.join({
         'Command oj is not found.',
         '    python -m venv venv',
