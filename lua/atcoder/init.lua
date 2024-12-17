@@ -171,6 +171,7 @@ local function execute_test(callback)
   }
   local command = cmd_fn(ctx)
   ctx.command = command
+  state.test_result_viewer:open()
   state.test_result_viewer:start_spinner()
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
