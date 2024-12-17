@@ -34,8 +34,8 @@ end
 local default_config = {
   oj = {
     path = 'oj',
-    tle = 5,
-    mle = 1024,
+    tle = 5, -- sec
+    mle = 1024, -- mega byte
   },
   codelldb_path = mason_path('codelldb'),
   cpptools_path = mason_path('cpptools'),
