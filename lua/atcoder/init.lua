@@ -400,6 +400,15 @@ M.download_tests = download_tests
 M.test = test
 M.login = auth.login
 M.submit = submit
+M.open = function()
+  state.test_result_viewer:open()
+end
+M.close = function()
+  state.test_result_viewer:close()
+end
+M.toggle = function()
+  state.test_result_viewer:toggle()
+end
 M.open_database = function()
   state.db:open()
 end

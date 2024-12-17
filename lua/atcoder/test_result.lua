@@ -6,6 +6,8 @@ local M = {}
 
 ---@class TestResultViewer
 ---@field open function
+---@field close function
+---@field toggle function
 ---@field reset_test_cases function
 ---@field update function
 ---@field get_state function
@@ -72,6 +74,26 @@ function M.new()
         width = math.floor(vim.o.columns * 0.4),
         style = 'minimal',
       })
+    end
+  end
+
+  obj.close = function(self)
+    local winid = utils.get_window_id(self.bufnr)
+    local hidden = not vim.api.nvim_win_is_valid(winid)
+
+    if not hidden then
+      vim.api.nvim_win_close(winid, false)
+    end
+  end
+
+  obj.toggle = function(self)
+    local winid = utils.get_window_id(self.bufnr)
+    local hidden = not vim.api.nvim_win_is_valid(winid)
+
+    if hidden then
+      obj:open()
+    else
+      obj:close()
     end
   end
 
