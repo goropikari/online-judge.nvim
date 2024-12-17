@@ -1,5 +1,6 @@
 require('atcoder.cmds')
 local auth = require('atcoder.auth')
+local config = require('atcoder.config')
 local database = require('atcoder.database')
 local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
@@ -13,38 +14,6 @@ end, 2)
 local M = {}
 
 local nopfn = function(_) end
-
-local cache_dir = vim.fs.joinpath(vim.fn.stdpath('cache'), '/atcoder.nvim')
-local function cache_to(path)
-  return vim.fs.joinpath(cache_dir, path)
-end
-
----@class PluginConfig
----@field out_dirpath string
----@field database_path string
----@field contest_problem string
----@field problems string
----@field contest_problem_csv string
----@field problems_csv string
----@field define_cmds boolean
----@field lang {string:LanguageOption}
-
----@type PluginConfig
-local default_config = {
-  out_dirpath = '/tmp/atcoder/',
-
-  database_path = cache_to('/atcoder.db'),
-  contest_problem = cache_to('/contest-problem.json'),
-  problems = cache_to('/problems.json'),
-  contest_problem_csv = cache_to('contest-problem.csv'),
-  problems_csv = cache_to('/problems.csv'),
-  define_cmds = true,
-  lang = {},
-}
-
----@type PluginConfig
----@diagnostic disable-next-line
-local config = {}
 
 ---@class State
 ---@field db Database
@@ -392,17 +361,19 @@ local function setup_cmds()
 end
 
 function M.setup(opts)
-  config = vim.tbl_deep_extend('force', default_config, opts or {})
-  lang.setup(config.lang)
+  config.setup(opts)
 
-  vim.fn.mkdir(config.out_dirpath, 'p')
-  vim.fn.mkdir(cache_dir, 'p')
+  local cfg = config.get()
+  lang.setup(cfg.lang)
+
+  vim.fn.mkdir(cfg.out_dirpath, 'p')
+  vim.fn.mkdir(cfg.cache_dir, 'p')
   state.db = database.new()
 
   state.test_result_viewer = test_result.new()
   state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
   state.test_result_viewer:register_submit_fn(submit)
-  if config.define_cmds then
+  if cfg.define_cmds then
     setup_cmds()
   end
 end
