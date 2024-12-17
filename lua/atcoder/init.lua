@@ -91,6 +91,7 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
     if out.code ~= 0 then
       -- oj の log は stdout に出る
       utils.notify(out.stdout, vim.log.levels.ERROR)
+      utils.notify(out.stderr, vim.log.levels.ERROR)
       return
     end
     utils.notify('Download tests of ' .. problem_id .. ': ' .. test_dirname)
@@ -132,7 +133,6 @@ local function _execute_test(test_dir_path, file_path, command, callback)
       '-c',
       command,
     }
-    vim.print(cmd)
     if vim.fn.executable('time') == 1 then -- `sudo apt-get install time`
       vim.list_extend(cmd, { '--mle', config.mle() })
     end
