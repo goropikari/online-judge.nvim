@@ -377,19 +377,6 @@ function M.setup(opts)
 
   local cfg = config.get()
 
-  if vim.fn.executable(oj()) == 0 then
-    utils.notify(
-      vim.fn.join({
-        'Command oj is not found.',
-        '    python -m venv venv',
-        '    source venv/bin/activate',
-        '    pip3 install git+https://github.com/online-judge-tools/oj@v12.0.0',
-      }, '\n'),
-      vim.log.levels.INFO
-    )
-    return
-  end
-
   lang.setup(cfg.lang)
   debug.setup()
 
