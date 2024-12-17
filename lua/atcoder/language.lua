@@ -9,10 +9,10 @@ local utils = require('atcoder.utils')
 ---@field id integer
 
 ---@class BuildConfig
----@field source_code string
+---@field file_path string
 
 ---@class DebugConfig
----@field source_code_path string
+---@field file_path string
 ---@field input_test_file_path string
 
 -- language id は提出ページの HTML source を見て言語の対応表から探るしか方法はなさそう
@@ -22,7 +22,7 @@ local lang = {
     ---@param cfg BuildConfig
     ---@param callback fun(cfg: BuildConfig)
     build = function(cfg, callback)
-      local file_path = vim.fn.fnamemodify(cfg.source_code, ':p')
+      local file_path = vim.fn.fnamemodify(cfg.file_path, ':p')
       local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
       vim.fn.mkdir(outdir, 'p')
       local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
@@ -51,7 +51,7 @@ local lang = {
     end,
     ---@param cfg BuildConfig
     command = function(cfg)
-      local file_path = cfg.source_code
+      local file_path = cfg.file_path
       local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
       vim.fn.mkdir(outdir, 'p')
       local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
@@ -59,13 +59,13 @@ local lang = {
     end,
     ---@param cfg DebugConfig
     dap_config = function(cfg)
-      local executable = vim.fn.fnamemodify(cfg.source_code_path, ':r')
+      local executable = vim.fn.fnamemodify(cfg.file_path, ':r')
       local base_config = {
         name = 'debug for atcoder',
         request = 'launch',
         program = executable,
-        cwd = vim.fn.fnamemodify(cfg.source_code_path, ':h'),
-        build = { 'g++', '-ggdb3', cfg.source_code_path, '-o', executable },
+        cwd = vim.fn.fnamemodify(cfg.file_path, ':h'),
+        build = { 'g++', '-ggdb3', cfg.file_path, '-o', executable },
       }
       if os.getenv('ATCODER_CPPTOOLS_ENABLE') == '1' then
         return vim.tbl_deep_extend('force', base_config, {
@@ -85,14 +85,14 @@ local lang = {
   python = {
     build = nil, -- use default fn
     command = function(cfg)
-      return 'python3 ' .. cfg.source_code
+      return 'python3 ' .. cfg.file_path
     end,
     dap_config = function(cfg)
       return {
         type = 'python',
         request = 'launch',
         name = 'python debug for atcoder',
-        program = cfg.source_code_path,
+        program = cfg.file_path,
         args = { cfg.input_test_file_path },
         -- 第一引数を stdin にいれることを前提としている。次のコードを input より前にいれる必要がある
         -- import sys

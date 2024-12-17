@@ -17,4 +17,4 @@ highlight AtCoderIO guifg=#FFFF00 gui=bold
 syntax keyword AtCoderIO input output expected
 
 highlight AtCoderProgram guifg=#66B2FF gui=bold
-syntax keyword AtCoderProgram contest_id problem_id test_dir source_code command
+syntax keyword AtCoderProgram contest_id problem_id test_dir file_path command

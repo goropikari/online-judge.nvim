@@ -27,7 +27,7 @@ local M = {}
 ---@field rerun_fn function
 ---@field submit_fn function
 ---
----@field source_code string
+---@field file_path string
 ---@field command string
 ---@field test_dir_path string
 ---@field filetype string
@@ -36,7 +36,7 @@ local M = {}
 ---@field problem_id? string
 
 ---@class TestResult
----@field source_code string
+---@field file_path string
 ---@field command string
 ---@field result string[]
 ---@field test_dir_path string
@@ -56,7 +56,7 @@ function M.new()
     end)(),
     test_case_preview_length = {},
     test_case_display_length = {},
-    source_code = '',
+    file_path = '',
     command = '',
     test_dir_path = '',
     origin_dap_adapters = {},
@@ -104,7 +104,7 @@ function M.new()
   ---@param test_result TestResult
   ---@param callback function
   function obj.update(self, test_result, callback)
-    self.source_code = test_result.source_code
+    self.file_path = test_result.file_path
     self.command = test_result.command
     self.test_dir_path = test_result.test_dir_path
     self.contest_id = test_result.contest_id
@@ -140,7 +140,7 @@ function M.new()
       'contest_id: ' .. (test_result.contest_id or ''),
       'problem_id: ' .. (test_result.problem_id or ''),
       'test_dir: ' .. test_result.test_dir_path,
-      'source_code: ' .. test_result.source_code,
+      'file_path: ' .. test_result.file_path,
       'command: ' .. test_result.command,
       '',
       'help',
@@ -177,7 +177,7 @@ function M.new()
 
   function obj.get_state(self)
     return {
-      source_code = self.source_code,
+      file_path = self.file_path,
       command = self.command,
       test_dir_path = self.test_dir_path,
       contest_id = self.contest_id,
@@ -469,11 +469,11 @@ function M.new()
     -- window 移動する前に実行しなければならない
     local test_file_path = obj:_test_file_path_under_cursor()
 
-    local winid = utils.get_window_id_for_file(obj.source_code)
+    local winid = utils.get_window_id_for_file(obj.file_path)
     vim.api.nvim_set_current_win(winid)
 
     local dap_config = lang.get_option(obj.filetype).dap_config({
-      source_code_path = obj.source_code,
+      file_path = obj.file_path,
       input_test_file_path = test_file_path.input,
     })
     dap.run(dap_config)

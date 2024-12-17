@@ -117,7 +117,7 @@ local function download_tests(include_system, callback)
   end)
 end
 
-local function _execute_test(test_dir_path, source_code, command, callback)
+local function _execute_test(test_dir_path, file_path, command, callback)
   state.test_result_viewer:reset_test_cases()
   async.void(function()
     local cmd = {
@@ -132,6 +132,7 @@ local function _execute_test(test_dir_path, source_code, command, callback)
       '-c',
       command,
     }
+    vim.print(cmd)
     if vim.fn.executable('time') == 1 then -- `sudo apt-get install time`
       vim.list_extend(cmd, { '--mle', config.mle() })
     end
@@ -142,7 +143,7 @@ local function _execute_test(test_dir_path, source_code, command, callback)
       callback({
         code = out.code,
         test_dir_path = test_dir_path,
-        source_code = source_code,
+        file_path = file_path,
         command = command,
         result = vim.split(out.stdout, '\n'),
         stderr = out.stderr,
@@ -159,13 +160,13 @@ local function execute_test(callback)
   local cmd_fn = lang_opt.command
   local lang_id = lang_opt.id
 
-  local source_code = utils.get_absolute_path()
+  local file_path = utils.get_absolute_path()
   local test_dirname = get_test_dirname()
   ---@class TestContext: BuildConfig
   ---@field test_dirname string
   ---@field command string
   local ctx = {
-    source_code = source_code,
+    file_path = file_path,
     test_dirname = test_dirname,
     filetype = vim.bo.filetype,
     lang_id = lang_id,
@@ -185,8 +186,8 @@ local function execute_test(callback)
         local download_res = download_tests_async(false)
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
-        ---@type {code:integer,test_dir_path:string,source_code:string,command:string,result:string[],stderr:string}
-        local test_res = _execute_test_async(test_dirname, source_code, command)
+        ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
+        local test_res = _execute_test_async(test_dirname, file_path, command)
         ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
 
         state.test_result_viewer:stop_spinner()
@@ -209,7 +210,7 @@ local function rerun_for_test_result_viewer(callback)
   local problem_id = cfg.problem_id
   local filetype = cfg.filetype
   local test_dirname = cfg.test_dir_path
-  local source_code = cfg.source_code
+  local file_path = cfg.file_path
   local command = cfg.command
 
   local lang_opt = lang.get_option(filetype)
@@ -217,7 +218,7 @@ local function rerun_for_test_result_viewer(callback)
   local lang_id = lang_opt.id
 
   local ctx = {
-    source_code = source_code,
+    file_path = file_path,
     test_dirname = test_dirname,
     filetype = filetype,
     lang_id = lang_id,
@@ -235,8 +236,8 @@ local function rerun_for_test_result_viewer(callback)
         local download_res = download_tests_async(contest_id, problem_id, test_dirname, false)
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
-        ---@type {code:integer,test_dir_path:string,source_code:string,command:string,result:string[],stderr:string}
-        local test_res = _execute_test_async(test_dirname, source_code, command)
+        ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
+        local test_res = _execute_test_async(test_dirname, file_path, command)
         ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
 
         state.test_result_viewer:stop_spinner()
@@ -267,13 +268,10 @@ end
 
 ---@param contest_id string
 ---@param problem_id string
----@param source_code string
+---@param file_path string
 ---@param lang_id integer
-local function _submit(contest_id, problem_id, source_code, lang_id)
+local function _submit(contest_id, problem_id, file_path, lang_id)
   local url = generate_problem_url(contest_id, problem_id)
-  -- local filepath = utils.get_absolute_path()
-  local file_path = source_code
-
   local callback = function()
     if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
       local confirm = vim.fn.input('submit [y/N]: ')
@@ -321,21 +319,21 @@ end
 local function submit()
   local contest_id = ''
   local problem_id = ''
-  local source_code = ''
+  local file_path = ''
   local lang_id = 0
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
     local viewer_state = state.test_result_viewer:get_state()
     contest_id = viewer_state.contest_id
     problem_id = viewer_state.problem_id
-    source_code = viewer_state.source_code
+    file_path = viewer_state.file_path
     lang_id = viewer_state.lang_id
   else
     contest_id = get_contest_id()
     problem_id = get_problem_id(contest_id) or error('failed to get problem_id')
-    source_code = utils.get_absolute_path()
+    file_path = utils.get_absolute_path()
     lang_id = lang.get_option(vim.bo.filetype).id
   end
-  _submit(contest_id, problem_id, source_code, lang_id)
+  _submit(contest_id, problem_id, file_path, lang_id)
 end
 
 local function setup_cmds()
@@ -412,6 +410,6 @@ M.open_database = function()
   state.db:open()
 end
 
-vim.keymap.set({ 'n' }, '<leader>at', test, { desc = 'atcoder: test sample cases' })
+-- vim.keymap.set({ 'n' }, '<leader>at', test, { desc = 'atcoder: test sample cases' })
 
 return M
