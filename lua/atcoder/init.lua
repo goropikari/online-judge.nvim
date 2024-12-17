@@ -299,7 +299,16 @@ local function _submit(contest_id, problem_id, source_code, lang_id)
         utils.notify(out.stdout, vim.log.levels.ERROR)
         utils.notify(out.stderr, vim.log.levels.ERROR)
       end
-      utils.notify(out.stdout)
+
+      vim.schedule(function()
+        local result = vim.fn.split(out.stdout, '\n')
+        for _, line in ipairs(result) do
+          local submission_url = line:match('%[SUCCESS%]%sresult:%s([%p%w]+)')
+          if submission_url then
+            utils.notify(submission_url)
+          end
+        end
+      end)
     end)()
   end
 
