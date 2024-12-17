@@ -14,7 +14,10 @@ local M = {}
 
 local nopfn = function(_) end
 
-local cache_dir = vim.fn.stdpath('cache') .. '/atcoder.nvim'
+local cache_dir = vim.fs.joinpath(vim.fn.stdpath('cache'), '/atcoder.nvim')
+local function cache_to(path)
+  return vim.fs.joinpath(cache_dir, path)
+end
 
 ---@class PluginConfig
 ---@field out_dirpath string
@@ -30,11 +33,11 @@ local cache_dir = vim.fn.stdpath('cache') .. '/atcoder.nvim'
 local default_config = {
   out_dirpath = '/tmp/atcoder/',
 
-  database_path = cache_dir .. '/atcoder.db',
-  contest_problem = cache_dir .. '/contest-problem.json',
-  problems = cache_dir .. '/problems.json',
-  contest_problem_csv = cache_dir .. '/contest-problem.csv',
-  problems_csv = cache_dir .. '/problems.csv',
+  database_path = cache_to('/atcoder.db'),
+  contest_problem = cache_to('/contest-problem.json'),
+  problems = cache_to('/problems.json'),
+  contest_problem_csv = cache_to('contest-problem.csv'),
+  problems_csv = cache_to('/problems.csv'),
   define_cmds = true,
   lang = {},
 }
@@ -77,7 +80,7 @@ end
 
 ---@return string
 local function get_test_dirname()
-  return vim.fn.expand('%:p:h') .. '/test_' .. utils.get_filename_without_ext()
+  return vim.fs.joinpath(vim.fn.expand('%:p:h'), '/test_' .. utils.get_filename_without_ext())
 end
 
 local function _download_tests(contest_id, problem_id, test_dirname, include_system, callback)
@@ -159,10 +162,10 @@ local function _execute_test(test_dir_path, source_code, command, callback)
       '-c',
       command,
     }
-    if vim.fn.executable('time') == 1 then
+    if vim.fn.executable('time') == 1 then -- `sudo apt-get install time`
       vim.list_extend(cmd, { '--mle', '1024' })
     end
-    vim.print(cmd)
+    -- vim.print(cmd)
     local out = system(cmd)
     vim.schedule(function()
       callback = callback or nopfn

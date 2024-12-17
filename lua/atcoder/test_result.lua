@@ -50,6 +50,8 @@ function M.new()
     bufnr = (function()
       local bufnr = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_set_option_value('filetype', 'atcoder', { buf = bufnr })
+      vim.print(vim.api.nvim_get_option_value('filetype', { buf = bufnr }))
+
       return bufnr
     end)(),
     test_case_preview_length = {},

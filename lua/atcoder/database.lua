@@ -9,7 +9,7 @@ function M.new()
   ---@class Database
   ---@field database_path string
   local obj = {
-    database_path = vim.fn.stdpath('cache') .. '/atcoder.nvim/atcoder.db',
+    database_path = vim.fs.joinpath(vim.fn.stdpath('cache'), '/atcoder.nvim/atcoder.db'),
   }
   vim.fn.mkdir(vim.fn.fnamemodify(obj.database_path, ':h'), 'p')
 

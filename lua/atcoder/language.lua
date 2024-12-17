@@ -23,9 +23,9 @@ local lang = {
     ---@param callback fun(cfg: BuildConfig)
     build = function(cfg, callback)
       local file_path = vim.fn.fnamemodify(cfg.source_code, ':p')
-      local outdir = '/tmp/atcoder.nvim/' .. vim.fn.fnamemodify(file_path, ':h:t')
+      local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
       vim.fn.mkdir(outdir, 'p')
-      local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
+      local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
       local file_timestamp = utils.get_file_timestamp(file_path)
       local exec_timestamp = utils.get_file_timestamp(exec_path)
 
@@ -52,23 +52,35 @@ local lang = {
     ---@param cfg BuildConfig
     command = function(cfg)
       local file_path = cfg.source_code
-      local outdir = '/tmp/atcoder.nvim/' .. vim.fn.fnamemodify(file_path, ':h:t')
+      local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
       vim.fn.mkdir(outdir, 'p')
-      local exec_path = outdir .. '/' .. vim.fn.fnamemodify(file_path, ':t:r')
+      local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
       return exec_path
     end,
     ---@param cfg DebugConfig
     dap_config = function(cfg)
       local executable = vim.fn.fnamemodify(cfg.source_code_path, ':r')
       return {
-        name = 'debug for atcoder',
-        type = 'cppdbg',
+        name = 'debug for AtCoder',
+        type = 'lldb',
         request = 'launch',
         program = executable,
         cwd = vim.fn.fnamemodify(cfg.source_code_path, ':h'),
-        args = { '<', cfg.input_test_file_path },
-        build = { 'g++', '-g', '-O0', cfg.source_code_path, '-o', executable },
+        build = function()
+          vim.system({ 'g++', '-ggdb', cfg.source_code_path, '-o', executable }):wait()
+        end,
+        stdio = { cfg.input_test_file_path },
+        expressions = 'native',
       }
+      -- return {
+      --   name = 'debug for atcoder',
+      --   type = 'cppdbg',
+      --   request = 'launch',
+      --   program = executable,
+      --   cwd = vim.fn.fnamemodify(cfg.source_code_path, ':h'),
+      --   args = { '<', cfg.input_test_file_path },
+      --   build = { 'g++', '-ggdb3', cfg.source_code_path, '-o', executable },
+      -- }
     end,
     id = 5028, -- C++ 23
   },
@@ -78,7 +90,6 @@ local lang = {
       return 'python3 ' .. cfg.source_code
     end,
     dap_config = function(cfg)
-      vim.print(cfg)
       return {
         type = 'python',
         request = 'launch',
