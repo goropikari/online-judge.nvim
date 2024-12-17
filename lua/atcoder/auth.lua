@@ -1,5 +1,8 @@
 local async = require('plenary.async')
+
+local oj = require('atcoder.config').oj
 local utils = require('atcoder.utils')
+
 local system = async.wrap(vim.system, 3)
 
 local M = {}
@@ -7,7 +10,7 @@ local M = {}
 function M.login()
   async.void(function()
     local cmd = {
-      'oj',
+      oj(),
       'login',
       '-u',
       vim.fn.input('username: '),

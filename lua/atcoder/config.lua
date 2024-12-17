@@ -5,7 +5,9 @@ local function cache_to(path)
   return vim.fs.joinpath(cache_dir, path)
 end
 
+
 ---@class PluginConfig
+---@field oj {path:string,tle:number,mle:integer}
 ---@field cache_dir string
 ---@field out_dirpath string
 ---@field database_path string
@@ -18,6 +20,12 @@ end
 
 ---@type PluginConfig
 local default_config = {
+  oj = {
+    path = 'oj',
+    tle = 5,
+    mle = 1024,
+  },
+
   out_dirpath = '/tmp/atcoder/',
 
   database_path = cache_to('/atcoder.db'),
@@ -41,6 +49,21 @@ end
 ---@return PluginConfig
 function M.get()
   return config
+end
+
+---@return string
+function M.oj()
+  return config.oj.path
+end
+
+---@return number
+function M.tle()
+  return config.oj.tle
+end
+
+---@return integer
+function M.mle()
+  return config.oj.mle
 end
 
 return M

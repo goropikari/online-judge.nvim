@@ -1,6 +1,7 @@
 require('atcoder.cmds')
 local auth = require('atcoder.auth')
 local config = require('atcoder.config')
+local oj = config.oj
 local database = require('atcoder.database')
 local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
@@ -71,7 +72,7 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
     return
   end
   local cmd = {
-    'oj',
+    oj(),
     'd',
     vim.fn.join({
       'https://atcoder.jp/contests',
@@ -120,19 +121,19 @@ local function _execute_test(test_dir_path, source_code, command, callback)
   state.test_result_viewer:reset_test_cases()
   async.void(function()
     local cmd = {
-      'oj',
+      oj(),
       't',
       '--error',
       '1e-6',
       '--tle',
-      '5',
+      config.tle(),
       '--directory',
       test_dir_path,
       '-c',
       command,
     }
     if vim.fn.executable('time') == 1 then -- `sudo apt-get install time`
-      vim.list_extend(cmd, { '--mle', '1024' })
+      vim.list_extend(cmd, { '--mle', config.mle() })
     end
     -- vim.print(cmd)
     local out = system(cmd)
@@ -285,7 +286,7 @@ local function _submit(contest_id, problem_id, source_code, lang_id)
     async.void(function()
       utils.notify('submit: ' .. url)
       local out = system({
-        'oj',
+        oj(),
         'submit',
         '-y',
         '-l',
@@ -365,6 +366,20 @@ function M.setup(opts)
   config.setup(opts)
 
   local cfg = config.get()
+
+  if vim.fn.executable(oj()) == 0 then
+    vim.notify(
+      vim.fn.join({
+        'Command oj is not found.',
+        '    python -m venv venv',
+        '    source venv/bin/activate',
+        '    pip3 install git+https://github.com/online-judge-tools/oj@v12.0.0',
+      }, '\n'),
+      vim.log.levels.INFO
+    )
+    return
+  end
+
   lang.setup(cfg.lang)
 
   vim.fn.mkdir(cfg.out_dirpath, 'p')
