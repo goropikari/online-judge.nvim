@@ -7,6 +7,7 @@ local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
 local utils = require('atcoder.utils')
 
+local debug = require('atcoder.debug')
 local async = require('plenary.async')
 local system = async.wrap(function(cmd, callback)
   vim.system(cmd, { text = true }, callback)
@@ -381,6 +382,7 @@ function M.setup(opts)
   end
 
   lang.setup(cfg.lang)
+  debug.setup()
 
   vim.fn.mkdir(cfg.out_dirpath, 'p')
   vim.fn.mkdir(cfg.cache_dir, 'p')

@@ -1,6 +1,6 @@
-local utils = require('atcoder.utils')
-
 local M = {}
+
+local utils = require('atcoder.utils')
 
 ---@class LanguageOption
 ---@field build fun(cfg:BuildConfig, callback:function)
@@ -60,27 +60,25 @@ local lang = {
     ---@param cfg DebugConfig
     dap_config = function(cfg)
       local executable = vim.fn.fnamemodify(cfg.source_code_path, ':r')
-      return {
-        name = 'debug for AtCoder',
-        type = 'lldb',
+      local base_config = {
+        name = 'debug for atcoder',
         request = 'launch',
         program = executable,
         cwd = vim.fn.fnamemodify(cfg.source_code_path, ':h'),
-        build = function()
-          vim.system({ 'g++', '-ggdb', cfg.source_code_path, '-o', executable }):wait()
-        end,
+        build = { 'g++', '-ggdb3', cfg.source_code_path, '-o', executable },
+      }
+      if os.getenv('ATCODER_CPPTOOLS_ENABLE') == '1' then
+        return vim.tbl_deep_extend('force', base_config, {
+          type = 'atcoder_cpptools',
+          args = { '<', cfg.input_test_file_path },
+        })
+      end
+
+      return vim.tbl_deep_extend('force', base_config, {
+        type = 'atcoder_codelldb',
         stdio = { cfg.input_test_file_path },
         expressions = 'native',
-      }
-      -- return {
-      --   name = 'debug for atcoder',
-      --   type = 'cppdbg',
-      --   request = 'launch',
-      --   program = executable,
-      --   cwd = vim.fn.fnamemodify(cfg.source_code_path, ':h'),
-      --   args = { '<', cfg.input_test_file_path },
-      --   build = { 'g++', '-ggdb3', cfg.source_code_path, '-o', executable },
-      -- }
+      })
     end,
     id = 5028, -- C++ 23
   },
