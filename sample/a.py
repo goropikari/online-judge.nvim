@@ -4,8 +4,10 @@ if len(sys.argv) == 2:
     # for debugpy
     sys.stdin = open(sys.argv[1])
 
-s = ''.join(sorted(input()))
-if s == '122333':
+s = input()
+t = sorted(s)
+u = ''.join(t)
+if u == '122333':
     print('Yes')
 else:
     print('No')
