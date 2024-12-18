@@ -1,10 +1,12 @@
 local M = {}
 
+---@diagnostic disable-next-line
 local cache_dir = vim.fs.joinpath(vim.fn.stdpath('cache'), '/atcoder.nvim')
 local function cache_to(path)
   return vim.fs.joinpath(cache_dir, path)
 end
 
+---@param app string
 ---@return string
 local function mason_path(app)
   local ok, registry = pcall(require, 'mason-registry')

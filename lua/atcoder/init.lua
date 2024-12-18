@@ -35,7 +35,8 @@ local function get_contest_id()
   return id
 end
 
----@return string|nil
+---@param contest_id string
+---@return string
 local function get_problem_id(contest_id)
   local problem_id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/[%w_-]+/tasks/([%w_-]+)')
   if problem_id then
@@ -48,11 +49,23 @@ local function get_problem_id(contest_id)
   return id
 end
 
+---@param contest_id string
+---@param problem_id string
+---@return string
+local function generate_problem_url(contest_id, problem_id)
+  return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
+end
+
 ---@return string
 local function get_test_dirname()
   return vim.fs.joinpath(vim.fn.expand('%:p:h'), '/test_' .. utils.get_filename_without_ext())
 end
 
+---@param contest_id string
+---@param problem_id string
+---@param test_dirname string
+---@param include_system boolean
+---@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
 local function _download_tests(contest_id, problem_id, test_dirname, include_system, callback)
   if vim.fn.isdirectory(test_dirname) == 1 then
     utils.notify('test files are already downloaded')
@@ -74,12 +87,7 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
   local cmd = {
     oj(),
     'd',
-    vim.fn.join({
-      'https://atcoder.jp/contests',
-      contest_id,
-      'tasks',
-      problem_id,
-    }, '/'),
+    generate_problem_url(contest_id, problem_id),
     '--directory',
     test_dirname,
   }
@@ -106,6 +114,8 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
   end)()
 end
 
+---@param include_system boolean
+---@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
 local function download_tests(include_system, callback)
   local contest_id = get_contest_id()
   local problem_id = get_problem_id(contest_id)
@@ -118,7 +128,11 @@ local function download_tests(include_system, callback)
   end)
 end
 
-local function _execute_test(test_dir_path, file_path, command, callback)
+---@param test_dirname string
+---@param file_path string
+---@param command string
+---@param callback fun(opts:{code:integer, test_dir_path:string, file_path:string, command:string, result:string[], stderr:string})
+local function _execute_test(test_dirname, file_path, command, callback)
   state.test_result_viewer:reset_test_cases()
   async.void(function()
     local cmd = {
@@ -129,7 +143,7 @@ local function _execute_test(test_dir_path, file_path, command, callback)
       '--tle',
       config.tle(),
       '--directory',
-      test_dir_path,
+      test_dirname,
       '-c',
       command,
     }
@@ -142,7 +156,7 @@ local function _execute_test(test_dir_path, file_path, command, callback)
       callback = callback or nopfn
       callback({
         code = out.code,
-        test_dir_path = test_dir_path,
+        test_dir_path = test_dirname,
         file_path = file_path,
         command = command,
         result = vim.split(out.stdout, '\n'),
@@ -153,6 +167,7 @@ local function _execute_test(test_dir_path, file_path, command, callback)
 end
 
 -- execute callback if pass the tests
+---@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
 local function execute_test(callback)
   callback = callback or nopfn
   local lang_opt = lang.get_option()
@@ -175,6 +190,7 @@ local function execute_test(callback)
   ctx.command = command
   state.test_result_viewer:open()
   state.test_result_viewer:start_spinner()
+  assert(build_fn, 'build_fn is nil')
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
@@ -203,6 +219,8 @@ local function execute_test(callback)
   end)
 end
 
+-- execute callback if pass the tests
+---@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
 local function rerun_for_test_result_viewer(callback)
   callback = callback or nopfn
   local cfg = state.test_result_viewer:get_state()
@@ -225,6 +243,7 @@ local function rerun_for_test_result_viewer(callback)
   }
 
   state.test_result_viewer:start_spinner()
+  assert(build_fn, 'build_fn is nil')
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
@@ -255,15 +274,10 @@ end
 
 local function test()
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
-    rerun_for_test_result_viewer()
+    rerun_for_test_result_viewer(nopfn)
     return
   end
-  execute_test()
-end
-
----@return string
-local function generate_problem_url(contest_id, problem_id)
-  return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
+  execute_test(nopfn)
 end
 
 ---@param contest_id string
@@ -329,7 +343,7 @@ local function submit()
     lang_id = viewer_state.lang_id
   else
     contest_id = get_contest_id()
-    problem_id = get_problem_id(contest_id) or error('failed to get problem_id')
+    problem_id = get_problem_id(contest_id)
     file_path = utils.get_absolute_path()
     lang_id = lang.get_option(vim.bo.filetype).id
   end
@@ -341,7 +355,7 @@ local function setup_cmds()
     test = test,
     submit = submit,
     download_tests = function()
-      download_tests(false)
+      download_tests(false, nopfn)
     end,
     update_contest_data = function()
       state.db:update_contest_data()
@@ -355,6 +369,7 @@ local function setup_cmds()
   vim.api.nvim_create_user_command('AtCoder', function(opts)
     fns[opts.args]()
   end, {
+    ---@diagnostic disable-next-line
     complete = function(arg_lead, cmd_line, cursor_pos)
       return {
         'test',

@@ -59,7 +59,7 @@ function M.maximum_test_id(dir_path, kind)
     if not name then
       break
     end
-    local id = tonumber(name:match(kind .. '%-(%d+).%w+') or '0')
+    local id = tonumber(name:match(kind .. '%-(%d+).%w+')) or 0
     if type == 'file' and id > 0 then
       if max_id < id then
         max_id = id

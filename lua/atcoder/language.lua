@@ -3,9 +3,9 @@ local M = {}
 local utils = require('atcoder.utils')
 
 ---@class LanguageOption
----@field build fun(cfg:BuildConfig, callback:function)
+---@field build fun(cfg:BuildConfig, callback:function)?
 ---@field command fun(cfg:BuildConfig): string
----@field dap_config fun(cfg:DebugConfig): table
+---@field dap_config fun(cfg:DebugConfig): DapConfig
 ---@field id integer
 
 ---@class BuildConfig
@@ -15,12 +15,27 @@ local utils = require('atcoder.utils')
 ---@field file_path string
 ---@field input_test_file_path string
 
+---@class DapConfig : dap.Configuration
+---@field program string
+
+---@class CppDapConfig : DapConfig
+---@field build string[]
+---@field cwd string
+
+---@class CpptoolsDapConfig : CppDapConfig
+---@field args string[]
+
+---@class CodelldbDapConfig : CppDapConfig
+---@field stdio string[]
+---@field expression 'native'
+
+---@class PythonDapConfig : DapConfig
+---@field args string[]
+
 -- language id は提出ページの HTML source を見て言語の対応表から探るしか方法はなさそう
----@type {string:LanguageOption}
+---@type table<string,LanguageOption>
 local lang = {
   cpp = {
-    ---@param cfg BuildConfig
-    ---@param callback fun(cfg: BuildConfig)
     build = function(cfg, callback)
       local file_path = vim.fn.fnamemodify(cfg.file_path, ':p')
       local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
@@ -49,7 +64,6 @@ local lang = {
         end
       end
     end,
-    ---@param cfg BuildConfig
     command = function(cfg)
       local file_path = cfg.file_path
       local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
@@ -57,7 +71,7 @@ local lang = {
       local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
       return exec_path
     end,
-    ---@param cfg DebugConfig
+    ---@return CpptoolsDapConfig|CodelldbDapConfig
     dap_config = function(cfg)
       local executable = vim.fn.fnamemodify(cfg.file_path, ':r')
       local base_config = {
@@ -87,6 +101,7 @@ local lang = {
     command = function(cfg)
       return 'python3 ' .. cfg.file_path
     end,
+    ---@return PythonDapConfig
     dap_config = function(cfg)
       return {
         type = 'python',
@@ -104,7 +119,7 @@ local lang = {
   },
 }
 
----@param filetype string|nil
+---@param filetype string?
 ---@return LanguageOption
 function M.get_option(filetype)
   filetype = filetype or vim.bo.filetype

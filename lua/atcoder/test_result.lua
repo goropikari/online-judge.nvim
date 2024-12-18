@@ -5,19 +5,19 @@ local utils = require('atcoder.utils')
 local M = {}
 
 ---@class TestResultViewer
----@field open function
----@field close function
----@field toggle function
----@field reset_test_cases function
----@field update function
+---@field open fun(TestResultViewer)
+---@field close fun(TestResultViewer)
+---@field toggle fun(TestResultViewer)
+---@field reset_test_cases fun(TestResultViewer)
+---@field update fun(TestResultViewer, TestResult, function)
 ---@field get_state function
----@field start_spinner function
----@field stop_spinner function
----@field register_rerun_fn function
----@field register_submit_fn function
----@field _test_file_prefix function
----@field _test_file_path_under_cursor function
----@field _open_test_case function
+---@field start_spinner fun(TestResultViewer)
+---@field stop_spinner fun(TestResultViewer)
+---@field register_rerun_fn fun(TestResultViewer, fn)
+---@field register_submit_fn fun(TestResultViewer, fn)
+---@field _test_file_prefix fun(TestResultViewer): string
+---@field _test_file_path_under_cursor fun(TestResultViewer): {input:string, output:string}
+---@field _open_test_case fun(input_path:string, output_path:string)
 ---
 ---@field bufnr integer
 ---@field test_case_preview_length {string:integer}
@@ -194,6 +194,8 @@ function M.new()
     self.spin:stop()
   end
 
+  ---@return string
+  ---@diagnostic disable-next-line
   function obj._test_file_prefix(self)
     local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
     test_case = string.match(test_case, '%w+%-%d+') or ''
@@ -240,9 +242,9 @@ function M.new()
   local function buf_config(input_bufnr, output_bufnr)
     local ns_id = vim.api.nvim_create_namespace('atcoder_nvim_namespace')
 
+    ---@param buf integer
     local function close_win(buf)
       local windows = vim.api.nvim_list_wins()
-      local result = {}
 
       for _, win_id in ipairs(windows) do
         if vim.api.nvim_win_get_buf(win_id) == buf then
@@ -256,6 +258,8 @@ function M.new()
       -- end
     end
 
+    ---@param input_buf integer
+    ---@param output_buf integer
     local function close_wins(input_buf, output_buf)
       obj:open()
       local winid = utils.get_window_id(obj.bufnr)

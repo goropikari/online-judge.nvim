@@ -3,7 +3,7 @@ local M = {}
 local config = require('atcoder.config')
 local ok, dap = pcall(require, 'dap')
 if not ok then
-  return
+  return M
 end
 
 function M.setup()
@@ -11,6 +11,7 @@ function M.setup()
     id = 'cppdbg', -- must be cppdbg
     type = 'executable',
     command = config.cpptools(),
+    ---@param cfg CpptoolsDapConfig
     enrich_config = function(cfg, on_config)
       local final_config = vim.deepcopy(cfg)
       local build_command = cfg.build
@@ -36,6 +37,7 @@ function M.setup()
       command = config.codelldb(),
       args = { '--port', '${port}' },
     },
+    ---@param cfg CodelldbDapConfig
     enrich_config = function(cfg, on_config)
       local final_config = vim.deepcopy(cfg)
       local build_command = cfg.build

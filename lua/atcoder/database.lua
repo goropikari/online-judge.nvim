@@ -94,7 +94,7 @@ function M.new()
     return vim.trim(res.stdout) == '1'
   end
 
-  ---@return string|nil
+  ---@return string
   function obj.get_problem_id(self, contest_id, problem_index)
     local out = vim
       .system({
@@ -104,8 +104,7 @@ function M.new()
       })
       :wait()
     if out.code ~= 0 then
-      utils.notify('failed to read database: ' .. contest_id, vim.log.levels.WARN)
-      return nil
+      error('failed to read database: ' .. contest_id, vim.log.levels.WARN)
     end
 
     return vim.trim(out.stdout)

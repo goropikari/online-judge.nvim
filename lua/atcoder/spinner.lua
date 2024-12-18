@@ -1,7 +1,8 @@
+local spinner = {}
+
 local spinner_symbols = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' }
 
-local spinner = {}
-function spinner.new(bufnr, msg)
+function spinner.new(bufnr, processing_msg)
   ---@class Spinner
   ---@field idx integer
   ---@field timer uv_timer_t
@@ -10,7 +11,7 @@ function spinner.new(bufnr, msg)
     idx = 1,
     timer = nil, ---@diagnostic disable-line
     bufnr = bufnr,
-    msg = msg or 'processing',
+    msg = processing_msg or 'processing',
   }
 
   obj.start = function(self)
