@@ -117,31 +117,10 @@ require('lazy').setup({
       },
     },
     {
-      'goropikari/nvim-dap-cpp',
-      dependencies = {
-        'mfussenegger/nvim-dap',
-        'nvim-lua/plenary.nvim',
-      },
-      ft = { 'cpp' },
-      opts = {
-        cpptools = {
-          path = vim.fn.stdpath('data') .. '/mason/packages/cpptools/extension/debugAdapters/bin/OpenDebugAD7',
-        },
-      },
-    },
-    {
-      'julianolf/nvim-dap-lldb',
-      dependencies = { 'mfussenegger/nvim-dap' },
-      opts = {},
-    },
-    {
       'mfussenegger/nvim-dap-python',
-      dependencies = {
-        'mfussenegger/nvim-dap',
-      },
       ft = { 'python' },
       config = function()
-        require('dap-python').setup('python')
+        require('dap-python').setup('python3')
       end,
     },
     {
@@ -151,7 +130,7 @@ require('lazy').setup({
       },
       opts = {},
     },
-    { import = 'plugins' },
+    -- { import = 'plugins' },
   },
   install = { colorscheme = { 'habamax' } },
   checker = { enabled = true },
