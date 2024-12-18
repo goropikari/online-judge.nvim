@@ -314,11 +314,17 @@ function M.new()
 
   -- edit test case
   vim.keymap.set({ 'n' }, 'e', function()
+    if string.match(obj:_test_file_prefix(), '^sample%-') then
+      utils.notify('could not edit sample test case. copy and then edit it.', vim.log.levels.WARN)
+      return
+    end
+
     local test_file_path = obj:_test_file_path_under_cursor()
     if vim.fn.filereadable(test_file_path.input) == 0 or vim.fn.filereadable(test_file_path.output) == 0 then
       -- do nothing if file is not exist.
       return
     end
+
     open_test_cases(test_file_path)
   end, {
     buffer = obj.bufnr,
@@ -366,6 +372,11 @@ function M.new()
   -- delete test case
   vim.keymap.set({ 'n' }, 'D', function()
     local test_case = obj:_test_file_prefix()
+    if string.match(test_case, '^sample%-') then
+      utils.notify('could not delete sample test case', vim.log.levels.WARN)
+      return
+    end
+
     local test_file_path = obj:_test_file_path_under_cursor()
 
     if vim.fn.filereadable(test_file_path.input) == 0 then
@@ -376,10 +387,6 @@ function M.new()
       if vim.api.nvim_buf_is_loaded(vim.fn.bufnr(v)) then
         vim.cmd('bd ' .. v)
       end
-    end
-    if string.match(test_case, '^sample%-') then
-      utils.notify('could not delete sample test case', vim.log.levels.WARN)
-      return
     end
     local remove = vim.fn.input('remove test case [y/N]: ')
     local yes = { yes = true, y = true }
