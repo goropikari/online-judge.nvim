@@ -1,4 +1,4 @@
 venv
-sample/a
+example/a
 *.in
 *.out
