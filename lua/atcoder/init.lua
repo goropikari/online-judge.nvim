@@ -374,7 +374,7 @@ local function setup_cmds()
       return {
         'test',
         'submit',
-        'download_test',
+        'download_tests',
         'login',
         'update_contest_data',
         'open_database',
