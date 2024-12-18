@@ -5,6 +5,7 @@ A Neovim plugin to streamline AtCoder contest workflows, including test case dow
 **Note**
 This plugin has only been tested with past problems. It has not been used or verified during ongoing contests.
 
+https://github.com/user-attachments/assets/71ccb4c6-af46-4e8e-88e6-278e45b790ee
 
 
 ## Features
