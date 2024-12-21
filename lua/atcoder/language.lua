@@ -73,7 +73,9 @@ local lang = {
     end,
     ---@return CpptoolsDapConfig|CodelldbDapConfig
     dap_config = function(cfg)
-      local executable = vim.fn.fnamemodify(cfg.file_path, ':r')
+      local outdir = '/tmp/atcoder.nvim/debug'
+      vim.fn.mkdir(outdir, 'p')
+      local executable = vim.fs.joinpath(outdir, vim.fn.fnamemodify(cfg.file_path, ':t:r'))
       local base_config = {
         name = 'debug for atcoder',
         request = 'launch',
