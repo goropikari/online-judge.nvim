@@ -25,28 +25,13 @@ local state = {}
 ---@return string
 local function get_contest_id()
   local id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/([%w_-]+)/') or os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname() -- base directory name
-
-  -- local found = state.db:exist_contest_id(id)
-  -- if not found then
-  --   utils.notify('invalid contest_id: ' .. id, vim.log.levels.ERROR)
-  --   return ''
-  -- end
-
-  return id
+  return assert(id, 'problem url is required')
 end
 
----@param contest_id string
 ---@return string
-local function get_problem_id(contest_id)
+local function get_problem_id()
   local problem_id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/[%w_-]+/tasks/([%w_-]+)')
-  if problem_id then
-    return problem_id
-  end
-  local problem_index = utils.get_filename_without_ext()
-  problem_index = string.lower(problem_index)
-
-  local id = state.db:get_problem_id(contest_id, problem_index)
-  return id
+  return assert(problem_id, 'problem url is required')
 end
 
 ---@param contest_id string
@@ -118,7 +103,7 @@ end
 ---@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
 local function download_tests(include_system, callback)
   local contest_id = get_contest_id()
-  local problem_id = get_problem_id(contest_id)
+  local problem_id = get_problem_id()
   local test_dirname = get_test_dirname()
   _download_tests(contest_id, problem_id, test_dirname, include_system, function(opts)
     callback = callback or nopfn
@@ -343,7 +328,7 @@ local function submit()
     lang_id = viewer_state.lang_id
   else
     contest_id = get_contest_id()
-    problem_id = get_problem_id(contest_id)
+    problem_id = get_problem_id()
     file_path = utils.get_absolute_path()
     lang_id = lang.get_option(vim.bo.filetype).id
   end
@@ -425,6 +410,23 @@ M.open_database = function()
   state.db:open()
 end
 
--- vim.keymap.set({ 'n' }, '<leader>at', test, { desc = 'atcoder: test sample cases' })
+function M.insert_problem_url()
+  local contest_id = utils.get_dirname()
+  local problem_id = contest_id .. '_' .. utils.get_filename_without_ext()
+  local url = string.format(vim.o.commentstring, generate_problem_url(contest_id, problem_id))
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url })
+end
+
+function M.insert_inffered_problem_url()
+  local contest_id = os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname()
+  local problem_index = utils.get_filename_without_ext()
+  local problem_id = state.db:get_problem_id(contest_id, problem_index)
+  if problem_id == '' then
+    vim.notify('failed to get problem_id', vim.log.levels.WARN)
+    return
+  end
+  local url = string.format(vim.o.commentstring, generate_problem_url(contest_id, problem_id))
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url })
+end
 
 return M

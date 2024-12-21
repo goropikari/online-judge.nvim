@@ -51,25 +51,36 @@ pip3 install git+https://github.com/online-judge-tools/oj@v12.0.0
 sudo apt-get install time
 ```
 
-## Commands
+## Commands/API
 The plugin provides the following commands:
 
-| Command                        | Description                                |
-| -----------------------------  | ------------------------------------       |
-| `:AtCoder test`                | Run sample test cases.                     |
-| `:AtCoder submit`              | Submit the code.                           |
-| `:AtCoder download_tests`      | Download test cases.                       |
-| `:AtCoder login`               | Log in to AtCoder. Required for submission |
-| `:AtCoder update_contest_data` | Update contest data from database.         |
-| `:AtCoder open_database`       | Open contest problem database.             |
+| Command                        | Description                                                        |
+| -----------------------------  | ------------------------------------                               |
+| `:AtCoder test`                | Run sample test cases.                                             |
+| `:AtCoder submit`              | Submit the code.                                                   |
+| `:AtCoder download_tests`      | Download test cases.                                               |
+| `:AtCoder login`               | Log in to AtCoder. Required for submission                         |
+| `:AtCoder update_contest_data` | Update contest data from database. Required for inffer problem url |
+| `:AtCoder open_database`       | Open contest problem database.                                     |
+
+
+| API                                                     | Description                                                                                                                            |
+| -----------------------------                           | ------------------------------------                                                                                                   |
+| `:lua require('atcoder').test()`                        | Run sample test cases.                                                                                                                 |
+| `:lua require('atcoder').submit()`                      | Submit the code.                                                                                                                       |
+| `:lua require('atcoder').download_tests()`              | Download test cases.                                                                                                                   |
+| `:lua require('atcoder').login()`                       | Log in to AtCoder. Required for submission                                                                                             |
+| `:lua require('atcoder').update_contest_data()`         | Update contest data from database. Required for inffer problem url                                                                     |
+| `:lua require('atcoder').open_databalse()`              | Open contest problem database.                                                                                                         |
+| `:lua require('atcoder').insert_problem_url()`          | Insert problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
+| `:lua require('atcoder').insert_inffered_problem_url()` | Insert problem url. The directory name is interpreted as the contest_id. The file name without ext is interpreted as the problem_index |
+
+
 
 ## Usage
 ### Download Test Cases
 
-To download test cases, you need to:
-1. Add the problem URL to the first line of your source file **(e.g., `https://atcoder.jp/contests/abc380/tasks/abc380_a`)**.
-   - OR -
-2. Set the **directory name** to the `contest_id` (e.g., `abc123`) and the **file name** to the `problem_index` (e.g., `a`).
+To download test cases, you need to add the problem URL to the first line of your source file **(e.g., `https://atcoder.jp/contests/abc380/tasks/abc380_a`)**.
 
 Then run:
 
@@ -100,6 +111,13 @@ You can extend or customize supported languages in the `setup()` function:
 {
     'goropikari/atcoder.nvim',
     opts = {
+        oj = {
+            path = 'oj',
+            tle = 5, -- sec
+            mle = 1024, -- mega byte
+        },
+        codelldb_path = '/path/to/mason_codelldb',
+
         ---@class LanguageOption
         ---@field build fun(cfg:BuildConfig, callback:fun(cfg:BuildConfig))
         ---@field command fun(cfg:BuildConfig): string

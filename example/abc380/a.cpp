@@ -1,4 +1,3 @@
-// https://atcoder.jp/contests/abc380/tasks/abc380_a
 #include <bits/stdc++.h>
 using namespace std;
 
