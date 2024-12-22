@@ -288,6 +288,8 @@ local function _submit(contest_id, problem_id, file_path, lang_id)
         '-y',
         '-l',
         lang_id,
+        '-w',
+        '0',
         url,
         file_path,
       })
