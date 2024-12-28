@@ -151,84 +151,20 @@ local function _execute_test(test_dirname, file_path, command, callback)
   end)()
 end
 
--- execute callback if pass the tests
----@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
-local function execute_test(callback)
-  callback = callback or nopfn
-  local lang_opt = lang.get_option()
-  local build_fn = lang_opt.build
-  local cmd_fn = lang_opt.command
-  local lang_id = lang_opt.id
+---@class TestContext: BuildConfig
+---@field test_dirname string
+---@field command string
 
-  local file_path = utils.get_absolute_path()
-  local test_dirname = get_test_dirname()
-  ---@class TestContext: BuildConfig
-  ---@field test_dirname string
-  ---@field command string
-  local ctx = {
-    file_path = file_path,
-    test_dirname = test_dirname,
-    filetype = vim.bo.filetype,
-    lang_id = lang_id,
-  }
-  local command = cmd_fn(ctx)
-  ctx.command = command
-  state.test_result_viewer:open()
+---@param ctx TestContext
+---@param build_fn fun(cfg:BuildConfig, callback:function)
+---@param contest_id string
+---@param problem_id string
+---@param test_dirname string
+---@param command string
+---@param file_path string
+---@param callback function
+local function test_sequence(ctx, build_fn, contest_id, problem_id, test_dirname, command, file_path, callback)
   state.test_result_viewer:start_spinner()
-  assert(build_fn, 'build_fn is nil')
-  build_fn(ctx, function(post_build)
-    ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
-    vim.schedule(function()
-      async.void(function()
-        local download_tests_async = async.wrap(download_tests, 1)
-        local _execute_test_async = async.wrap(_execute_test, 4)
-
-        ---@type {contest_id:string, problem_id:string}
-        local download_res = download_tests_async()
-        ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
-
-        ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
-        local test_res = _execute_test_async(test_dirname, file_path, command)
-        ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
-
-        state.test_result_viewer:stop_spinner()
-
-        ctx = vim.tbl_deep_extend('force', ctx, test_res)
-        state.test_result_viewer:update(ctx)
-
-        if test_res.code == 0 then
-          callback(ctx)
-        end
-      end)()
-    end)
-  end)
-end
-
--- execute callback if pass the tests
----@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
-local function rerun_for_test_result_viewer(callback)
-  callback = callback or nopfn
-  local cfg = state.test_result_viewer:get_state()
-  local contest_id = cfg.contest_id
-  local problem_id = cfg.problem_id
-  local filetype = cfg.filetype
-  local test_dirname = cfg.test_dir_path
-  local file_path = cfg.file_path
-  local command = cfg.command
-
-  local lang_opt = lang.get_option(filetype)
-  local build_fn = lang_opt.build
-  local lang_id = lang_opt.id
-
-  local ctx = {
-    file_path = file_path,
-    test_dirname = test_dirname,
-    filetype = filetype,
-    lang_id = lang_id,
-  }
-
-  state.test_result_viewer:start_spinner()
-  assert(build_fn, 'build_fn is nil')
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
@@ -255,6 +191,66 @@ local function rerun_for_test_result_viewer(callback)
       end)()
     end)
   end)
+end
+
+-- execute callback if pass the tests
+---@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
+local function execute_test(callback)
+  callback = callback or nopfn
+  local lang_opt = lang.get_option()
+  local build_fn = lang_opt.build
+  assert(build_fn, 'build_fn is nil')
+  local cmd_fn = lang_opt.command
+  local lang_id = lang_opt.id
+
+  local contest_id = get_contest_id()
+  local problem_id = get_problem_id()
+  if problem_id == '' or problem_id == nil then
+    utils.notify('problem url is required', vim.log.levels.ERROR)
+    return
+  end
+
+  local file_path = utils.get_absolute_path()
+  local test_dirname = get_test_dirname()
+
+  local ctx = {
+    file_path = file_path,
+    test_dirname = test_dirname,
+    filetype = vim.bo.filetype,
+    lang_id = lang_id,
+  }
+  local command = cmd_fn(ctx)
+  ctx.command = command
+
+  state.test_result_viewer:open()
+  test_sequence(ctx, build_fn, contest_id, problem_id, test_dirname, command, file_path, callback)
+end
+
+-- execute callback if pass the tests
+---@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
+local function rerun_for_test_result_viewer(callback)
+  callback = callback or nopfn
+  local cfg = state.test_result_viewer:get_state()
+  local contest_id = cfg.contest_id
+  local problem_id = cfg.problem_id
+  local filetype = cfg.filetype
+  local test_dirname = cfg.test_dir_path
+  local file_path = cfg.file_path
+  local command = cfg.command
+
+  local lang_opt = lang.get_option(filetype)
+  local build_fn = lang_opt.build
+  assert(build_fn, 'build_fn is nil')
+  local lang_id = lang_opt.id
+
+  local ctx = {
+    file_path = file_path,
+    test_dirname = test_dirname,
+    filetype = filetype,
+    lang_id = lang_id,
+  }
+
+  test_sequence(ctx, build_fn, contest_id, problem_id, test_dirname, command, file_path, callback)
 end
 
 local function test()
