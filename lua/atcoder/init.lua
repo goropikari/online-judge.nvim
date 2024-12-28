@@ -1,6 +1,5 @@
 local auth = require('atcoder.auth')
 local config = require('atcoder.config')
-local oj = config.oj
 local database = require('atcoder.database')
 local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
@@ -11,6 +10,7 @@ local async = require('plenary.async')
 local system = async.wrap(function(cmd, callback)
   vim.system(cmd, { text = true }, callback)
 end, 2)
+local oj = config.oj
 
 local M = {}
 
@@ -49,9 +49,8 @@ end
 ---@param contest_id string
 ---@param problem_id string
 ---@param test_dirname string
----@param include_system boolean
 ---@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
-local function _download_tests(contest_id, problem_id, test_dirname, include_system, callback)
+local function _download_tests(contest_id, problem_id, test_dirname, callback)
   if vim.fn.isdirectory(test_dirname) == 1 then
     utils.notify('test files are already downloaded')
     if type(callback) == 'function' then
@@ -63,6 +62,7 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
     end
     return
   end
+
   contest_id = contest_id or ''
   problem_id = problem_id or ''
   if contest_id == '' or problem_id == '' then
@@ -76,9 +76,6 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
     '--directory',
     test_dirname,
   }
-  if include_system then
-    table.insert(cmd, '--system')
-  end
   async.void(function()
     local out = system(cmd)
     if out.code ~= 0 then
@@ -99,13 +96,12 @@ local function _download_tests(contest_id, problem_id, test_dirname, include_sys
   end)()
 end
 
----@param include_system boolean
 ---@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
-local function download_tests(include_system, callback)
+local function download_tests(callback)
   local contest_id = get_contest_id()
   local problem_id = get_problem_id()
   local test_dirname = get_test_dirname()
-  _download_tests(contest_id, problem_id, test_dirname, include_system, function(opts)
+  _download_tests(contest_id, problem_id, test_dirname, function(opts)
     callback = callback or nopfn
     opts = opts or {}
     opts = vim.tbl_deep_extend('force', opts, { contest_id = contest_id, problem_id = problem_id })
@@ -180,11 +176,11 @@ local function execute_test(callback)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
       async.void(function()
-        local download_tests_async = async.wrap(download_tests, 2)
+        local download_tests_async = async.wrap(download_tests, 1)
         local _execute_test_async = async.wrap(_execute_test, 4)
 
         ---@type {contest_id:string, problm_id:string}
-        local download_res = download_tests_async(false)
+        local download_res = download_tests_async()
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
         ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
@@ -233,11 +229,11 @@ local function rerun_for_test_result_viewer(callback)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
       async.void(function()
-        local download_tests_async = async.wrap(_download_tests, 5)
+        local download_tests_async = async.wrap(_download_tests, 4)
         local _execute_test_async = async.wrap(_execute_test, 4)
 
         ---@type {contest_id:string, problm_id:string}
-        local download_res = download_tests_async(contest_id, problem_id, test_dirname, false)
+        local download_res = download_tests_async(contest_id, problem_id, test_dirname)
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
         ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
@@ -342,7 +338,7 @@ local function setup_cmds()
     test = test,
     submit = submit,
     download_tests = function()
-      download_tests(false, nopfn)
+      download_tests(nopfn)
     end,
     update_contest_data = function()
       state.db:update_contest_data()

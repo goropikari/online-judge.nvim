@@ -1,8 +1,8 @@
+/*https://atcoder.jp/contests/abc380/tasks/abc380_a*/
 #include <bits/stdc++.h>
 using namespace std;
 
-int main()
-{
+int main() {
     string N;
     cin >> N;
     sort(N.begin(), N.end());

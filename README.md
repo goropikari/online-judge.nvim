@@ -28,6 +28,14 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
     'goropikari/atcoder.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+
+       -- optional for debug
+      'mfussenegger/nvim-dap',
+      'mfussenegger/nvim-dap-python',
+    },
+
     opts = {
         ---@class PluginConfig
         ---@field oj {path:string, tle:number, mle:integer}
@@ -116,6 +124,7 @@ You can extend or customize supported languages in the `setup()` function:
             tle = 5, -- sec
             mle = 1024, -- mega byte
         },
+        -- The default path is set by the installation done via Mason.
         codelldb_path = '/path/to/mason_codelldb',
 
         ---@class LanguageOption
@@ -135,7 +144,7 @@ You can extend or customize supported languages in the `setup()` function:
         lang = {
             -- e.g.,
             python = {
-                build = nil, -- use default fn
+                build = nil, -- use default fn if build is nil
                 command = function(cfg)
                   return 'python3 ' .. cfg.file_path
                 end,
