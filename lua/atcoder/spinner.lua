@@ -15,6 +15,9 @@ function spinner.new(bufnr, processing_msg)
   }
 
   obj.start = function(self)
+    if self.timer ~= nil then
+      self:stop()
+    end
     vim.api.nvim_set_option_value('modifiable', true, { buf = self.bufnr })
     self.timer = vim.uv.new_timer()
     vim.uv.timer_start(self.timer, 0, 100, function()
@@ -30,6 +33,7 @@ function spinner.new(bufnr, processing_msg)
     if self.timer ~= nil then
       self.timer:stop()
       self.timer:close()
+      self.timer = nil
     end
   end
 

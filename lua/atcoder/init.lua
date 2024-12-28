@@ -25,13 +25,13 @@ local state = {}
 ---@return string
 local function get_contest_id()
   local id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/([%w_-]+)/') or os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname() -- base directory name
-  return assert(id, 'problem url is required')
+  return id
 end
 
 ---@return string
 local function get_problem_id()
   local problem_id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/[%w_-]+/tasks/([%w_-]+)')
-  return assert(problem_id, 'problem url is required')
+  return problem_id
 end
 
 ---@param contest_id string
@@ -100,6 +100,10 @@ end
 local function download_tests(callback)
   local contest_id = get_contest_id()
   local problem_id = get_problem_id()
+  if problem_id == '' or problem_id == nil then
+    utils.notify('problem url is required', vim.log.levels.ERROR)
+    return
+  end
   local test_dirname = get_test_dirname()
   _download_tests(contest_id, problem_id, test_dirname, function(opts)
     callback = callback or nopfn
@@ -179,7 +183,7 @@ local function execute_test(callback)
         local download_tests_async = async.wrap(download_tests, 1)
         local _execute_test_async = async.wrap(_execute_test, 4)
 
-        ---@type {contest_id:string, problm_id:string}
+        ---@type {contest_id:string, problem_id:string}
         local download_res = download_tests_async()
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
@@ -327,6 +331,10 @@ local function submit()
   else
     contest_id = get_contest_id()
     problem_id = get_problem_id()
+    if problem_id == '' or problem_id == nil then
+      utils.notify('problem url is required', vim.log.levels.ERROR)
+      return
+    end
     file_path = utils.get_absolute_path()
     lang_id = lang.get_option(vim.bo.filetype).id
   end
@@ -420,7 +428,7 @@ function M.insert_inffered_problem_url()
   local problem_index = utils.get_filename_without_ext()
   local problem_id = state.db:get_problem_id(contest_id, problem_index)
   if problem_id == '' then
-    vim.notify('failed to get problem_id', vim.log.levels.WARN)
+    vim.notify('failed to get problem_id', vim.log.levels.ERROR)
     return
   end
   local url = string.format(vim.o.commentstring, generate_problem_url(contest_id, problem_id))
