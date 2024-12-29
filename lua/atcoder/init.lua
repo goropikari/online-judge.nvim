@@ -431,4 +431,12 @@ function M.insert_inffered_problem_url()
   vim.api.nvim_buf_set_lines(0, 0, 0, false, { url })
 end
 
+function M.create_test_dir()
+  local dirname = get_test_dirname()
+  vim.fn.mkdir(dirname, 'p')
+  local test_prefix = vim.fs.joinpath(dirname, 'custom-1.')
+  vim.system({ 'touch', test_prefix .. 'in' })
+  vim.system({ 'touch', test_prefix .. 'out' })
+end
+
 return M

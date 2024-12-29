@@ -77,9 +77,19 @@ function M.tle()
   return config.oj.tle
 end
 
+---@param tle_sec integer
+function M.set_tle(tle_sec)
+  config.oj.tle = tle_sec
+end
+
 ---@return integer
 function M.mle()
   return config.oj.mle
+end
+
+---@param mle_mb integer
+function M.set_mle(mle_mb)
+  config.oj.mle = mle_mb
 end
 
 ---@return string
