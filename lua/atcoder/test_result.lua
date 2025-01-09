@@ -151,7 +151,7 @@ function M.new()
       '  e:    edit test case',
       '  c:    copy test case',
       '  D:    delete test case',
-      '  s:    submit',
+      '  s:    submit with test',
       '  S:    show internal state for plugin debugging',
       '',
     }, lines)

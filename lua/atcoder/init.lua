@@ -261,59 +261,8 @@ local function test()
   execute_test(nopfn)
 end
 
----@param contest_id string
----@param problem_id string
----@param file_path string
----@param lang_id integer
-local function _submit(contest_id, problem_id, file_path, lang_id)
-  local url = generate_problem_url(contest_id, problem_id)
-  local callback = function()
-    if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
-      local confirm = vim.fn.input('submit [y/N]: ')
-      confirm = string.lower(confirm)
-      if not ({ yes = true, y = true })[confirm] then
-        return
-      end
-    end
-
-    async.void(function()
-      utils.notify('submit: ' .. url)
-      local out = system({
-        oj(),
-        'submit',
-        '-y',
-        '-l',
-        lang_id,
-        '-w',
-        '0',
-        url,
-        file_path,
-      })
-      if out.code ~= 0 then
-        utils.notify(out.stdout, vim.log.levels.ERROR)
-        utils.notify(out.stderr, vim.log.levels.ERROR)
-      end
-
-      vim.schedule(function()
-        local result = vim.fn.split(out.stdout, '\n')
-        for _, line in ipairs(result) do
-          local submission_url = line:match('%[SUCCESS%]%sresult:%s([%p%w]+)')
-          if submission_url then
-            utils.notify(submission_url)
-          end
-        end
-      end)
-    end)()
-  end
-
-  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
-    rerun_for_test_result_viewer(callback)
-  else
-    execute_test(callback)
-  end
-end
-
-local function submit()
+---@return {contest_id:string,problem_id:string,file_path:string,lang_id:integer}|nil
+local function prepare_submit_info()
   local contest_id = ''
   local problem_id = ''
   local file_path = ''
@@ -329,18 +278,97 @@ local function submit()
     problem_id = get_problem_id()
     if problem_id == '' or problem_id == nil then
       utils.notify('problem url is required', vim.log.levels.ERROR)
-      return
+      return nil
     end
     file_path = utils.get_absolute_path()
     lang_id = lang.get_option(vim.bo.filetype).id
   end
-  _submit(contest_id, problem_id, file_path, lang_id)
+
+  return {
+    contest_id = contest_id,
+    problem_id = problem_id,
+    file_path = file_path,
+    lang_id = lang_id,
+  }
+end
+
+local function _submit(contest_id, problem_id, file_path, lang_id)
+  local url = generate_problem_url(contest_id, problem_id)
+  if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
+    local confirm = vim.fn.input('submit [y/N]: ')
+    confirm = string.lower(confirm)
+    if not ({ yes = true, y = true })[confirm] then
+      return
+    end
+  end
+
+  async.void(function()
+    utils.notify('submit: ' .. url)
+    local out = system({
+      oj(),
+      'submit',
+      '-y',
+      '-l',
+      lang_id,
+      '-w',
+      '0',
+      url,
+      file_path,
+    })
+    if out.code ~= 0 then
+      utils.notify(out.stdout, vim.log.levels.ERROR)
+      utils.notify(out.stderr, vim.log.levels.ERROR)
+    end
+
+    vim.schedule(function()
+      local result = vim.fn.split(out.stdout, '\n')
+      for _, line in ipairs(result) do
+        local submission_url = line:match('%[SUCCESS%]%sresult:%s([%p%w]+)')
+        if submission_url then
+          utils.notify(submission_url)
+        end
+      end
+    end)
+  end)()
+end
+
+local function submit()
+  local info = prepare_submit_info()
+  if info == nil then
+    return
+  end
+  _submit(info.contest_id, info.problem_id, info.file_path, info.lang_id)
+end
+
+---@param contest_id string
+---@param problem_id string
+---@param file_path string
+---@param lang_id integer
+local function _submit_with_test(contest_id, problem_id, file_path, lang_id)
+  local callback = function()
+    _submit(contest_id, problem_id, file_path, lang_id)
+  end
+
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+    rerun_for_test_result_viewer(callback)
+  else
+    execute_test(callback)
+  end
+end
+
+local function submit_with_test()
+  local info = prepare_submit_info()
+  if info == nil then
+    return
+  end
+  _submit_with_test(info.contest_id, info.problem_id, info.file_path, info.lang_id)
 end
 
 local function setup_cmds()
   local fns = {
     test = test,
     submit = submit,
+    submit_with_test = submit_with_test,
     download_tests = function()
       download_tests(nopfn)
     end,
@@ -361,6 +389,7 @@ local function setup_cmds()
       return {
         'test',
         'submit',
+        'submit_with_test',
         'download_tests',
         'login',
         'update_contest_data',
@@ -385,7 +414,7 @@ function M.setup(opts)
 
   state.test_result_viewer = test_result.new()
   state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
-  state.test_result_viewer:register_submit_fn(submit)
+  state.test_result_viewer:register_submit_fn(submit_with_test)
   if cfg.define_cmds then
     setup_cmds()
   end
@@ -398,7 +427,7 @@ M._download_tests = _download_tests
 M.download_tests = download_tests
 M.test = test
 M.login = auth.login
-M.submit = submit
+M.submit_with_test = submit_with_test
 M.open = function()
   state.test_result_viewer:open()
 end
