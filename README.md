@@ -39,7 +39,6 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
         ---@class PluginConfig
         ---@field oj {path:string, tle:number, mle:integer}
         ---@field codelldb_path string
-        ---@field cpptools_path string
         ---@field define_cmds boolean
         ---@field lang {string:LanguageOption}
     },

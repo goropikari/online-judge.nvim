@@ -22,9 +22,6 @@ local utils = require('atcoder.utils')
 ---@field build string[]
 ---@field cwd string
 
----@class CpptoolsDapConfig : CppDapConfig
----@field args string[]
-
 ---@class CodelldbDapConfig : CppDapConfig
 ---@field stdio string[]
 ---@field expression 'native'
@@ -71,7 +68,7 @@ local lang = {
       local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
       return exec_path
     end,
-    ---@return CpptoolsDapConfig|CodelldbDapConfig
+    ---@return CodelldbDapConfig
     dap_config = function(cfg)
       local outdir = '/tmp/atcoder.nvim/debug'
       vim.fn.mkdir(outdir, 'p')
@@ -83,12 +80,6 @@ local lang = {
         cwd = vim.fn.fnamemodify(cfg.file_path, ':h'),
         build = { 'g++', '-ggdb3', cfg.file_path, '-o', executable },
       }
-      if os.getenv('ATCODER_CPPTOOLS_ENABLE') == '1' then
-        return vim.tbl_deep_extend('force', base_config, {
-          type = 'atcoder_cpptools',
-          args = { '<', cfg.input_test_file_path },
-        })
-      end
 
       return vim.tbl_deep_extend('force', base_config, {
         type = 'atcoder_codelldb',

@@ -21,7 +21,6 @@ end
 ---@class PluginConfig
 ---@field oj {path:string,tle:number,mle:integer}
 ---@field codelldb_path string
----@field cpptools_path string
 ---@field cache_dir string
 ---@field out_dirpath string
 ---@field contest_problem string
@@ -39,7 +38,6 @@ local default_config = {
     mle = 1024, -- mega byte
   },
   codelldb_path = mason_path('codelldb'),
-  cpptools_path = mason_path('cpptools'),
 
   out_dirpath = '/tmp/atcoder/',
 
@@ -88,11 +86,6 @@ end
 ---@param mle_mb integer
 function M.set_mle(mle_mb)
   config.oj.mle = mle_mb
-end
-
----@return string
-function M.cpptools()
-  return vim.fs.joinpath(config.cpptools_path, 'extension', 'debugAdapters', 'bin', 'OpenDebugAD7')
 end
 
 ---@return string
