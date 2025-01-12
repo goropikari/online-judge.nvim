@@ -124,7 +124,7 @@ require('lazy').setup({
       end,
     },
     {
-      dir = '/workspaces/atcoder.nvim',
+      dir = '/workspaces/online-judge.nvim',
       dependencies = {
         'nvim-lua/plenary.nvim',
       },

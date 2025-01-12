@@ -1,8 +1,8 @@
 local M = {}
 
-local cfg = require('atcoder.config')
 local async = require('plenary.async')
-local utils = require('atcoder.utils')
+local cfg = require('online-judge.config')
+local utils = require('online-judge.utils')
 
 local system = function(cmd, cb)
   return vim.system(cmd, { text = true }, cb)

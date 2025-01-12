@@ -1,11 +1,11 @@
-local atcoder = require('atcoder.service.atcoder')
-local aoj = require('atcoder.service.aoj')
-local config = require('atcoder.config')
-local lang = require('atcoder.language')
-local test_result = require('atcoder.test_result')
-local utils = require('atcoder.utils')
+local atcoder = require('online-judge.service.atcoder')
+local aoj = require('online-judge.service.aoj')
+local config = require('online-judge.config')
+local lang = require('online-judge.language')
+local test_result = require('online-judge.test_result')
+local utils = require('online-judge.utils')
 
-local debug = require('atcoder.debug')
+local debug = require('online-judge.debug')
 local async = require('plenary.async')
 local oj = config.oj
 
@@ -150,15 +150,13 @@ local function test_sequence(ctx, build_fn, url, test_dirname, command, file_pat
 end
 
 -- execute callback if pass the tests
----@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
+---@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, code:integer, test_dir_path:string, file_path:string,command:string,result:string[],stderr:string})
 local function execute_test(callback)
   callback = callback or nopfn
   local lang_opt = lang.get_option()
   local build_fn = lang_opt.build
   assert(build_fn, 'build_fn is nil')
   local cmd_fn = lang_opt.command
-  local lang_id = lang_opt.id
-  local aoj_lang_id = lang_opt.aoj_id
 
   local url = utils.get_problem_url()
   if url == '' then
@@ -173,8 +171,6 @@ local function execute_test(callback)
     file_path = file_path,
     test_dirname = test_dirname,
     filetype = vim.bo.filetype,
-    lang_id = lang_id,
-    aoj_lang_id = aoj_lang_id,
     url = url,
   }
   local command = cmd_fn(ctx)
@@ -190,21 +186,17 @@ local function rerun_for_test_result_viewer(callback)
   local url = cfg.url
   local file_path = cfg.file_path
   local test_dirname = utils.get_test_dirname(file_path)
-  local filetype = vim.filetype.match({ filename = file_path })
+  local filetype = utils.get_filetype(file_path)
 
   local lang_opt = lang.get_option(filetype)
   local build_fn = lang_opt.build
   assert(build_fn, 'build_fn is nil')
   local command = lang_opt.command({ file_path = file_path })
-  local lang_id = lang_opt.id
-  local aoj_lang_id = lang_opt.aoj_id
 
   local ctx = {
     file_path = file_path,
     test_dirname = test_dirname,
     filetype = filetype,
-    lang_id = lang_id,
-    aoj_lang_id = aoj_lang_id,
     url = url,
   }
 
@@ -236,7 +228,7 @@ local function prepare_submit_info()
     local viewer_state = state.test_result_viewer:get_state()
     url = viewer_state.url
     file_path = viewer_state.file_path
-    filetype = vim.filetype.match({ filename = file_path })
+    filetype = utils.get_filetype(file_path)
   else
     url = utils.get_problem_url()
     if url == '' then
@@ -324,7 +316,7 @@ local function setup_cmds()
     login = atcoder.login,
   }
 
-  vim.api.nvim_create_user_command('AtCoder', function(opts)
+  vim.api.nvim_create_user_command('OnlineJudge', function(opts)
     fns[opts.args]()
   end, {
     ---@diagnostic disable-next-line

@@ -1,4 +1,4 @@
-# atcoder.nvim
+# online-judge.nvim
 
 A Neovim plugin to streamline AtCoder contest workflows, including test case downloads, execution, and submissions.
 
@@ -26,7 +26,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-    'goropikari/atcoder.nvim',
+    'goropikari/online-judge.nvim',
     dependencies = {
       'nvim-lua/plenary.nvim',
 
@@ -70,11 +70,11 @@ The plugin provides the following commands:
 
 | API                                                     | Description                                                                                                                            |
 | -----------------------------                           | ------------------------------------                                                                                                   |
-| `:lua require('atcoder').test()`                        | Run sample test cases.                                                                                                                 |
-| `:lua require('atcoder').submit()`                      | Submit the code.                                                                                                                       |
-| `:lua require('atcoder').download_tests()`              | Download test cases.                                                                                                                   |
-| `:lua require('atcoder').login()`                       | Log in to AtCoder. Required for submission                                                                                             |
-| `:lua require('atcoder').insert_problem_url()`          | Insert problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
+| `:lua require('online-judge').test()`                        | Run sample test cases.                                                                                                                 |
+| `:lua require('online-judge').submit()`                      | Submit the code.                                                                                                                       |
+| `:lua require('online-judge').download_tests()`              | Download test cases.                                                                                                                   |
+| `:lua require('online-judge').login()`                       | Log in to AtCoder. Required for submission                                                                                             |
+| `:lua require('online-judge').insert_problem_url()`          | Insert problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
 
 
 
@@ -110,7 +110,7 @@ You can extend or customize supported languages in the `setup()` function:
 
 ```lua
 {
-    'goropikari/atcoder.nvim',
+    'goropikari/online-judge.nvim',
     opts = {
         oj = {
             path = 'oj',

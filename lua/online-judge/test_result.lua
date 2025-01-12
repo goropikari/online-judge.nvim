@@ -1,6 +1,6 @@
-local lang = require('atcoder.language')
-local spinner = require('atcoder.spinner')
-local utils = require('atcoder.utils')
+local lang = require('online-judge.language')
+local spinner = require('online-judge.spinner')
+local utils = require('online-judge.utils')
 
 local M = {}
 
@@ -33,9 +33,6 @@ M.buf_filetype = buf_filetype
 ---@field file_path string
 ---@field command string
 ---@field test_dir_path string
----@field filetype string
----@field lang_id integer
----@field aoj_lang_id integer
 ---@field url string
 
 ---@class TestResult
@@ -43,9 +40,6 @@ M.buf_filetype = buf_filetype
 ---@field command string
 ---@field result string[]
 ---@field test_dir_path string
----@field filetype string
----@field lang_id integer
----@field aoj_lang_id integer
 ---@field url string
 
 function M.new()
@@ -110,9 +104,6 @@ function M.new()
     self.file_path = test_result.file_path
     self.command = test_result.command
     self.test_dir_path = test_result.test_dir_path
-    self.filetype = test_result.filetype
-    self.lang_id = test_result.lang_id
-    self.aoj_lang_id = test_result.aoj_lang_id
     self.url = test_result.url
     local lines = test_result.result
     for i, line in ipairs(lines) do
@@ -181,9 +172,6 @@ function M.new()
       file_path = self.file_path,
       command = self.command,
       test_dir_path = self.test_dir_path,
-      filetype = self.filetype,
-      lang_id = self.lang_id,
-      aoj_lang_id = self.aoj_lang_id,
       url = self.url,
     }
   end
@@ -241,7 +229,7 @@ function M.new()
   ---@param input_bufnr integer
   ---@param output_bufnr integer
   local function buf_config(input_bufnr, output_bufnr)
-    local ns_id = vim.api.nvim_create_namespace('atcoder_nvim_namespace')
+    local ns_id = vim.api.nvim_create_namespace('online_judge_nvim_namespace')
 
     ---@param buf integer
     local function close_win(buf)
@@ -484,7 +472,8 @@ function M.new()
     local winid = utils.get_window_id_for_file(obj.file_path)
     vim.api.nvim_set_current_win(winid)
 
-    local dap_config = lang.get_option(obj.filetype).dap_config({
+    local filetype = utils.get_filetype(obj.file_path)
+    local dap_config = lang.get_option(filetype).dap_config({
       file_path = obj.file_path,
       input_test_file_path = test_file_path.input,
     })

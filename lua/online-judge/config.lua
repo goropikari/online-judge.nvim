@@ -1,7 +1,7 @@
 local M = {}
 
 ---@diagnostic disable-next-line
-local cache_dir = vim.fs.joinpath(vim.fn.stdpath('cache'), '/atcoder.nvim')
+local cache_dir = vim.fs.joinpath(vim.fn.stdpath('cache'), '/online-judge.nvim')
 local function cache_to(path)
   return vim.fs.joinpath(cache_dir, path)
 end

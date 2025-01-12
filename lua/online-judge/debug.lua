@@ -1,14 +1,14 @@
 local M = {}
 
-local config = require('atcoder.config')
 local ok, dap = pcall(require, 'dap')
 if not ok then
   return M
 end
+local config = require('online-judge.config')
 
 function M.setup()
-  dap.adapters.atcoder_codelldb = {
-    id = 'atcoder_codelldb',
+  dap.adapters.oneline_judge_codelldb = {
+    id = 'oneline_judge_codelldb',
     type = 'server',
     port = '${port}',
     executable = {

@@ -1,6 +1,6 @@
 local M = {}
 
-local utils = require('atcoder.utils')
+local utils = require('online-judge.utils')
 
 ---@class LanguageOption
 ---@field build fun(cfg:BuildConfig, callback:function)?
@@ -36,7 +36,7 @@ local lang = {
   cpp = {
     build = function(cfg, callback)
       local file_path = vim.fn.fnamemodify(cfg.file_path, ':p')
-      local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
+      local outdir = vim.fs.joinpath('/tmp/online-judge.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
       vim.fn.mkdir(outdir, 'p')
       local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
       local file_timestamp = utils.get_file_timestamp(file_path)
@@ -64,14 +64,14 @@ local lang = {
     end,
     command = function(cfg)
       local file_path = cfg.file_path
-      local outdir = vim.fs.joinpath('/tmp/atcoder.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
+      local outdir = vim.fs.joinpath('/tmp/online-judge.nvim', vim.fn.fnamemodify(file_path, ':h:t'))
       vim.fn.mkdir(outdir, 'p')
       local exec_path = vim.fs.joinpath(outdir, vim.fn.fnamemodify(file_path, ':t:r'))
       return exec_path
     end,
     ---@return CodelldbDapConfig
     dap_config = function(cfg)
-      local outdir = '/tmp/atcoder.nvim/debug'
+      local outdir = '/tmp/online-judge.nvim/debug'
       vim.fn.mkdir(outdir, 'p')
       local executable = vim.fs.joinpath(outdir, vim.fn.fnamemodify(cfg.file_path, ':t:r'))
       local base_config = {

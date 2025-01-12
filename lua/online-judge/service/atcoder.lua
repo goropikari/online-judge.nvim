@@ -2,8 +2,8 @@ local M = {}
 
 local async = require('plenary.async')
 
-local oj = require('atcoder.config').oj
-local utils = require('atcoder.utils')
+local oj = require('online-judge.config').oj
+local utils = require('online-judge.utils')
 
 function M.login()
   async.void(function()

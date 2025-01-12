@@ -12,6 +12,11 @@ function M.get_file_timestamp(file)
 end
 
 ---@return string
+function M.get_filetype(filepath)
+  return vim.filetype.match({ filename = filepath }) or ''
+end
+
+---@return string
 function M.get_dirname()
   return vim.fn.expand('%:p:h:t')
 end
