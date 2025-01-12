@@ -20,7 +20,6 @@ https://github.com/user-attachments/assets/47aea616-c5cf-4651-b99d-21d06fab4156
 # Requirements
 - Neovim 0.10+
 - [online-judge-tools](https://github.com/online-judge-tools/oj)
-- sqlite3
 
 ## Installation
 Using [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -68,8 +67,6 @@ The plugin provides the following commands:
 | `:AtCoder submit`              | Submit the code.                                                   |
 | `:AtCoder download_tests`      | Download test cases.                                               |
 | `:AtCoder login`               | Log in to AtCoder. Required for submission                         |
-| `:AtCoder update_contest_data` | Update contest data from database. Required for inffer problem url |
-| `:AtCoder open_database`       | Open contest problem database.                                     |
 
 
 | API                                                     | Description                                                                                                                            |
@@ -78,10 +75,7 @@ The plugin provides the following commands:
 | `:lua require('atcoder').submit()`                      | Submit the code.                                                                                                                       |
 | `:lua require('atcoder').download_tests()`              | Download test cases.                                                                                                                   |
 | `:lua require('atcoder').login()`                       | Log in to AtCoder. Required for submission                                                                                             |
-| `:lua require('atcoder').update_contest_data()`         | Update contest data from database. Required for inffer problem url                                                                     |
-| `:lua require('atcoder').open_databalse()`              | Open contest problem database.                                                                                                         |
 | `:lua require('atcoder').insert_problem_url()`          | Insert problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
-| `:lua require('atcoder').insert_inffered_problem_url()` | Insert problem url. The directory name is interpreted as the contest_id. The file name without ext is interpreted as the problem_index |
 
 
 

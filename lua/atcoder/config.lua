@@ -24,7 +24,6 @@ end
 ---@field cpptools_path string
 ---@field cache_dir string
 ---@field out_dirpath string
----@field database_path string
 ---@field contest_problem string
 ---@field problems string
 ---@field contest_problem_csv string
@@ -44,7 +43,6 @@ local default_config = {
 
   out_dirpath = '/tmp/atcoder/',
 
-  database_path = cache_to('/atcoder.db'),
   contest_problem = cache_to('/contest-problem.json'),
   problems = cache_to('/problems.json'),
   contest_problem_csv = cache_to('contest-problem.csv'),

@@ -1,6 +1,5 @@
 local auth = require('atcoder.auth')
 local config = require('atcoder.config')
-local database = require('atcoder.database')
 local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
 local utils = require('atcoder.utils')
@@ -17,7 +16,6 @@ local M = {}
 local nopfn = function(_) end
 
 ---@class State
----@field db Database
 ---@field test_result_viewer TestResultViewer
 local state = {}
 
@@ -372,13 +370,7 @@ local function setup_cmds()
     download_tests = function()
       download_tests(nopfn)
     end,
-    update_contest_data = function()
-      state.db:update_contest_data()
-    end,
     login = auth.login,
-    open_database = function()
-      state.db:open()
-    end,
   }
 
   vim.api.nvim_create_user_command('AtCoder', function(opts)
@@ -392,8 +384,6 @@ local function setup_cmds()
         'submit_with_test',
         'download_tests',
         'login',
-        'update_contest_data',
-        'open_database',
       }
     end,
     nargs = 1,
@@ -410,7 +400,6 @@ function M.setup(opts)
 
   vim.fn.mkdir(cfg.out_dirpath, 'p')
   vim.fn.mkdir(cfg.cache_dir, 'p')
-  state.db = database.new()
 
   state.test_result_viewer = test_result.new()
   state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
@@ -420,9 +409,6 @@ function M.setup(opts)
   end
 end
 
-M.update_contest_data = function()
-  state.db:update_contest_data()
-end
 M._download_tests = _download_tests
 M.download_tests = download_tests
 M.test = test
@@ -437,25 +423,10 @@ end
 M.toggle = function()
   state.test_result_viewer:toggle()
 end
-M.open_database = function()
-  state.db:open()
-end
 
 function M.insert_problem_url()
   local contest_id = utils.get_dirname()
   local problem_id = contest_id .. '_' .. utils.get_filename_without_ext()
-  local url = string.format(vim.o.commentstring, generate_problem_url(contest_id, problem_id))
-  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url })
-end
-
-function M.insert_inffered_problem_url()
-  local contest_id = os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname()
-  local problem_index = utils.get_filename_without_ext()
-  local problem_id = state.db:get_problem_id(contest_id, problem_index)
-  if problem_id == '' then
-    vim.notify('failed to get problem_id', vim.log.levels.ERROR)
-    return
-  end
   local url = string.format(vim.o.commentstring, generate_problem_url(contest_id, problem_id))
   vim.api.nvim_buf_set_lines(0, 0, 0, false, { url })
 end
