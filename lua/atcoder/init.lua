@@ -24,13 +24,6 @@ local function get_test_dirname()
   return vim.fs.joinpath(vim.fn.expand('%:p:h'), '/test_' .. utils.get_filename_without_ext())
 end
 
----@return string
-local function get_problem_url()
-  local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
-  local url = line:match('https?://[%w-_%.%?%.:/%+=&]+')
-  return url or ''
-end
-
 ---@param url string
 ---@param test_dirname string
 ---@param callback fun(cfg:{test_dirname:string})
@@ -76,7 +69,7 @@ end
 
 ---@param callback fun(cfg:{test_dirname:string})
 local function download_tests(callback)
-  local url = get_problem_url()
+  local url = utils.get_problem_url()
   local test_dirname = get_test_dirname()
   _download_tests(url, test_dirname, function(opts)
     callback = callback or nopfn
@@ -173,7 +166,7 @@ local function execute_test(callback)
   local cmd_fn = lang_opt.command
   local lang_id = lang_opt.id
 
-  local url = get_problem_url()
+  local url = utils.get_problem_url()
   if url == '' then
     utils.notify('problem url is required', vim.log.levels.ERROR)
     return
@@ -199,7 +192,7 @@ end
 local function rerun_for_test_result_viewer(callback)
   callback = callback or nopfn
   local cfg = state.test_result_viewer:get_state()
-  local url = get_problem_url()
+  local url = utils.get_problem_url()
   local filetype = cfg.filetype
   local test_dirname = cfg.test_dir_path
   local file_path = cfg.file_path
@@ -239,7 +232,7 @@ local function prepare_submit_info()
     file_path = viewer_state.file_path
     lang_id = viewer_state.lang_id
   else
-    url = get_problem_url()
+    url = utils.get_problem_url()
     if url == '' then
       utils.notify('problem url is required', vim.log.levels.ERROR)
       return nil

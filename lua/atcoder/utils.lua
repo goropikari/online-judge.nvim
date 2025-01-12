@@ -43,6 +43,13 @@ function M.count_prefix_files(dir_path, prefix_pattern)
   return count
 end
 
+---@return string
+function M.get_problem_url()
+  local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+  local url = line:match('https?://[%w-_%.%?%.:/%+=&]+')
+  return url or ''
+end
+
 ---@param dir_path string
 ---@param kind 'sample'|'custom'
 ---@return integer
