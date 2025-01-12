@@ -1,5 +1,7 @@
 local M = {}
 
+local async = require('plenary.async')
+
 function M.get_file_timestamp(file)
   local stat = vim.uv.fs_stat(file)
   if stat then
@@ -101,5 +103,9 @@ function M.notify(msg, levels, opts)
     vim.notify(msg, levels, opts)
   end)
 end
+
+M.async_system = async.wrap(function(cmd, callback)
+  vim.system(cmd, { text = true }, callback)
+end, 2)
 
 return M

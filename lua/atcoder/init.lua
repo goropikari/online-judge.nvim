@@ -1,4 +1,4 @@
-local auth = require('atcoder.auth')
+local atcoder = require('atcoder.service.atcoder')
 local config = require('atcoder.config')
 local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
@@ -6,9 +6,6 @@ local utils = require('atcoder.utils')
 
 local debug = require('atcoder.debug')
 local async = require('plenary.async')
-local system = async.wrap(function(cmd, callback)
-  vim.system(cmd, { text = true }, callback)
-end, 2)
 local oj = config.oj
 
 local M = {}
@@ -50,7 +47,7 @@ local function _download_tests(url, test_dirname, callback)
     test_dirname,
   }
   async.void(function()
-    local out = system(cmd)
+    local out = utils.async_system(cmd)
     if out.code ~= 0 then
       -- oj の log は stdout に出る
       utils.notify(out.stdout, vim.log.levels.ERROR)
@@ -101,7 +98,7 @@ local function _execute_test(test_dirname, file_path, command, callback)
       vim.list_extend(cmd, { '--mle', config.mle() })
     end
     -- vim.print(cmd)
-    local out = system(cmd)
+    local out = utils.async_system(cmd)
     vim.schedule(function()
       callback = callback or nopfn
       callback({
@@ -214,7 +211,7 @@ local function rerun_for_test_result_viewer(callback)
 end
 
 local function test()
-  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
     rerun_for_test_result_viewer(nopfn)
     return
   end
@@ -226,7 +223,7 @@ local function prepare_submit_info()
   local url = ''
   local file_path = ''
   local lang_id = 0
-  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
     local viewer_state = state.test_result_viewer:get_state()
     url = viewer_state.url
     file_path = viewer_state.file_path
@@ -253,7 +250,7 @@ local function _submit(opts)
   local url = opts.url
   local file_path = opts.file_path
   local lang_id = opts.lang_id
-  if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
+  if os.getenv('ONLINE_JUDGE_FORCE_SUBMISSION') ~= '1' then
     local confirm = vim.fn.input('submit [y/N]: ')
     confirm = string.lower(confirm)
     if not ({ yes = true, y = true })[confirm] then
@@ -261,34 +258,7 @@ local function _submit(opts)
     end
   end
 
-  async.void(function()
-    utils.notify('submit: ' .. url)
-    local out = system({
-      oj(),
-      'submit',
-      '-y',
-      '-l',
-      lang_id,
-      '-w',
-      '0',
-      url,
-      file_path,
-    })
-    if out.code ~= 0 then
-      utils.notify(out.stdout, vim.log.levels.ERROR)
-      utils.notify(out.stderr, vim.log.levels.ERROR)
-    end
-
-    vim.schedule(function()
-      local result = vim.fn.split(out.stdout, '\n')
-      for _, line in ipairs(result) do
-        local submission_url = line:match('%[SUCCESS%]%sresult:%s([%p%w]+)')
-        if submission_url then
-          utils.notify(submission_url)
-        end
-      end
-    end)
-  end)()
+  atcoder.submit(url, file_path, lang_id)
 end
 
 local function submit()
@@ -315,7 +285,7 @@ local function _submit_with_test(url, file_path, lang_id)
     })
   end
 
-  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
+  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
     rerun_for_test_result_viewer(callback)
   else
     execute_test(callback)
@@ -338,7 +308,7 @@ local function setup_cmds()
     download_tests = function()
       download_tests(nopfn)
     end,
-    login = auth.login,
+    login = atcoder.login,
   }
 
   vim.api.nvim_create_user_command('AtCoder', function(opts)
@@ -380,7 +350,7 @@ end
 M._download_tests = _download_tests
 M.download_tests = download_tests
 M.test = test
-M.login = auth.login
+M.login = atcoder.login
 M.submit_with_test = submit_with_test
 M.open = function()
   state.test_result_viewer:open()

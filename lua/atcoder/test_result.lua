@@ -4,6 +4,9 @@ local utils = require('atcoder.utils')
 
 local M = {}
 
+local buf_filetype = 'online_judge'
+M.buf_filetype = buf_filetype
+
 ---@class TestResultViewer
 ---@field open fun(TestResultViewer)
 ---@field close fun(TestResultViewer)
@@ -49,7 +52,7 @@ function M.new()
   local obj = {
     bufnr = (function()
       local bufnr = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_set_option_value('filetype', 'atcoder', { buf = bufnr })
+      vim.api.nvim_set_option_value('filetype', buf_filetype, { buf = bufnr })
       return bufnr
     end)(),
     test_case_preview_length = {},
