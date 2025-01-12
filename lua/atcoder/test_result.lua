@@ -32,8 +32,7 @@ local M = {}
 ---@field test_dir_path string
 ---@field filetype string
 ---@field lang_id integer
----@field contest_id? string
----@field problem_id? string
+---@field url string
 
 ---@class TestResult
 ---@field file_path string
@@ -42,8 +41,7 @@ local M = {}
 ---@field test_dir_path string
 ---@field filetype string
 ---@field lang_id integer
----@field contest_id? string
----@field problem_id? string
+---@field url string
 
 function M.new()
   ---@type TestResultViewer
@@ -107,10 +105,9 @@ function M.new()
     self.file_path = test_result.file_path
     self.command = test_result.command
     self.test_dir_path = test_result.test_dir_path
-    self.contest_id = test_result.contest_id
-    self.problem_id = test_result.problem_id
     self.filetype = test_result.filetype
     self.lang_id = test_result.lang_id
+    self.url = test_result.url
     local lines = test_result.result
     for i, line in ipairs(lines) do
       line = line:gsub('^%[%w+%]%s', '')
@@ -137,8 +134,6 @@ function M.new()
     self.test_case_display_length[''] = nil
 
     lines = vim.list_extend({
-      'contest_id: ' .. (test_result.contest_id or ''),
-      'problem_id: ' .. (test_result.problem_id or ''),
       'test_dir: ' .. test_result.test_dir_path,
       'file_path: ' .. test_result.file_path,
       'command: ' .. test_result.command,
@@ -180,10 +175,9 @@ function M.new()
       file_path = self.file_path,
       command = self.command,
       test_dir_path = self.test_dir_path,
-      contest_id = self.contest_id,
-      problem_id = self.problem_id,
       filetype = self.filetype,
       lang_id = self.lang_id,
+      url = self.url,
     }
   end
 

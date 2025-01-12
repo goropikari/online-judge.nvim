@@ -19,58 +19,40 @@ local nopfn = function(_) end
 ---@field test_result_viewer TestResultViewer
 local state = {}
 
---- Retrieve the contest_id in the order of the URL written at the beginning of the file, the ATCODER_CONTEST_ID environment variable, and the directory name.
----@return string
-local function get_contest_id()
-  local id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/([%w_-]+)/') or os.getenv('ATCODER_CONTEST_ID') or utils.get_dirname() -- base directory name
-  return id
-end
-
----@return string
-local function get_problem_id()
-  local problem_id = string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], 'contests/[%w_-]+/tasks/([%w_-]+)')
-  return problem_id
-end
-
----@param contest_id string
----@param problem_id string
----@return string
-local function generate_problem_url(contest_id, problem_id)
-  return string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
-end
-
 ---@return string
 local function get_test_dirname()
   return vim.fs.joinpath(vim.fn.expand('%:p:h'), '/test_' .. utils.get_filename_without_ext())
 end
 
----@param contest_id string
----@param problem_id string
+---@return string
+local function get_problem_url()
+  local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+  local url = line:match('https?://[%w-_%.%?%.:/%+=&]+')
+  return url or ''
+end
+
+---@param url string
 ---@param test_dirname string
----@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
-local function _download_tests(contest_id, problem_id, test_dirname, callback)
+---@param callback fun(cfg:{test_dirname:string})
+local function _download_tests(url, test_dirname, callback)
   if vim.fn.isdirectory(test_dirname) == 1 then
     utils.notify('test files are already downloaded')
     if type(callback) == 'function' then
       callback({
-        contest_id = contest_id,
-        problem_id = problem_id,
         test_dirname = test_dirname,
       })
     end
     return
   end
 
-  contest_id = contest_id or ''
-  problem_id = problem_id or ''
-  if contest_id == '' or problem_id == '' then
-    utils.notify('contest_id or problem_id is empty: contest_id = ' .. contest_id .. ', problem_id = ' .. problem_id, vim.log.levels.ERROR)
+  if url == '' then
+    utils.notify(url .. ' is not written', vim.log.levels.ERROR)
     return
   end
   local cmd = {
     oj(),
     'd',
-    generate_problem_url(contest_id, problem_id),
+    url,
     '--directory',
     test_dirname,
   }
@@ -82,31 +64,23 @@ local function _download_tests(contest_id, problem_id, test_dirname, callback)
       utils.notify(out.stderr, vim.log.levels.ERROR)
       return
     end
-    utils.notify('Download tests of ' .. problem_id .. ': ' .. test_dirname)
+    utils.notify('Download tests of ' .. url)
 
     if type(callback) == 'function' then
       callback({
-        contest_id = contest_id,
-        problem_id = problem_id,
         test_dirname = test_dirname,
       })
     end
   end)()
 end
 
----@param callback fun(cfg:{contest_id:string,problem_id:string,test_dirname:string})
+---@param callback fun(cfg:{test_dirname:string})
 local function download_tests(callback)
-  local contest_id = get_contest_id()
-  local problem_id = get_problem_id()
-  if problem_id == '' or problem_id == nil then
-    utils.notify('problem url is required', vim.log.levels.ERROR)
-    return
-  end
+  local url = get_problem_url()
   local test_dirname = get_test_dirname()
-  _download_tests(contest_id, problem_id, test_dirname, function(opts)
+  _download_tests(url, test_dirname, function(opts)
     callback = callback or nopfn
     opts = opts or {}
-    opts = vim.tbl_deep_extend('force', opts, { contest_id = contest_id, problem_id = problem_id })
     callback(opts)
   end)
 end
@@ -155,23 +129,21 @@ end
 
 ---@param ctx TestContext
 ---@param build_fn fun(cfg:BuildConfig, callback:function)
----@param contest_id string
----@param problem_id string
+---@param url string
 ---@param test_dirname string
 ---@param command string
 ---@param file_path string
 ---@param callback function
-local function test_sequence(ctx, build_fn, contest_id, problem_id, test_dirname, command, file_path, callback)
+local function test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
   state.test_result_viewer:start_spinner()
   build_fn(ctx, function(post_build)
     ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
     vim.schedule(function()
       async.void(function()
-        local download_tests_async = async.wrap(_download_tests, 4)
+        local download_tests_async = async.wrap(_download_tests, 3)
         local _execute_test_async = async.wrap(_execute_test, 4)
 
-        ---@type {contest_id:string, problm_id:string}
-        local download_res = download_tests_async(contest_id, problem_id, test_dirname)
+        local download_res = download_tests_async(url, test_dirname)
         ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
 
         ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
@@ -201,9 +173,8 @@ local function execute_test(callback)
   local cmd_fn = lang_opt.command
   local lang_id = lang_opt.id
 
-  local contest_id = get_contest_id()
-  local problem_id = get_problem_id()
-  if problem_id == '' or problem_id == nil then
+  local url = get_problem_url()
+  if url == '' then
     utils.notify('problem url is required', vim.log.levels.ERROR)
     return
   end
@@ -216,21 +187,19 @@ local function execute_test(callback)
     test_dirname = test_dirname,
     filetype = vim.bo.filetype,
     lang_id = lang_id,
+    url = url,
   }
   local command = cmd_fn(ctx)
   ctx.command = command
 
   state.test_result_viewer:open()
-  test_sequence(ctx, build_fn, contest_id, problem_id, test_dirname, command, file_path, callback)
+  test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
 end
 
--- execute callback if pass the tests
----@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, lang_id:integer, contest_id:string, problem:string, code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string})
 local function rerun_for_test_result_viewer(callback)
   callback = callback or nopfn
   local cfg = state.test_result_viewer:get_state()
-  local contest_id = cfg.contest_id
-  local problem_id = cfg.problem_id
+  local url = get_problem_url()
   local filetype = cfg.filetype
   local test_dirname = cfg.test_dir_path
   local file_path = cfg.file_path
@@ -248,7 +217,7 @@ local function rerun_for_test_result_viewer(callback)
     lang_id = lang_id,
   }
 
-  test_sequence(ctx, build_fn, contest_id, problem_id, test_dirname, command, file_path, callback)
+  test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
 end
 
 local function test()
@@ -259,22 +228,19 @@ local function test()
   execute_test(nopfn)
 end
 
----@return {contest_id:string,problem_id:string,file_path:string,lang_id:integer}|nil
+---@return {url:string,file_path:string,lang_id:integer}|nil
 local function prepare_submit_info()
-  local contest_id = ''
-  local problem_id = ''
+  local url = ''
   local file_path = ''
   local lang_id = 0
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
     local viewer_state = state.test_result_viewer:get_state()
-    contest_id = viewer_state.contest_id
-    problem_id = viewer_state.problem_id
+    url = viewer_state.url
     file_path = viewer_state.file_path
     lang_id = viewer_state.lang_id
   else
-    contest_id = get_contest_id()
-    problem_id = get_problem_id()
-    if problem_id == '' or problem_id == nil then
+    url = get_problem_url()
+    if url == '' then
       utils.notify('problem url is required', vim.log.levels.ERROR)
       return nil
     end
@@ -283,15 +249,17 @@ local function prepare_submit_info()
   end
 
   return {
-    contest_id = contest_id,
-    problem_id = problem_id,
+    url = url,
     file_path = file_path,
     lang_id = lang_id,
   }
 end
 
-local function _submit(contest_id, problem_id, file_path, lang_id)
-  local url = generate_problem_url(contest_id, problem_id)
+---@param opts {url:string,file_path:string,lang_id:integer,aoj_lang_id:string}
+local function _submit(opts)
+  local url = opts.url
+  local file_path = opts.file_path
+  local lang_id = opts.lang_id
   if os.getenv('ATCODER_FORCE_SUBMISSION') ~= '1' then
     local confirm = vim.fn.input('submit [y/N]: ')
     confirm = string.lower(confirm)
@@ -335,16 +303,23 @@ local function submit()
   if info == nil then
     return
   end
-  _submit(info.contest_id, info.problem_id, info.file_path, info.lang_id)
+  _submit({
+    url = info.url,
+    file_path = info.file_path,
+    lang_id = info.lang_id,
+  })
 end
 
----@param contest_id string
----@param problem_id string
+---@param url string
 ---@param file_path string
 ---@param lang_id integer
-local function _submit_with_test(contest_id, problem_id, file_path, lang_id)
+local function _submit_with_test(url, file_path, lang_id)
   local callback = function()
-    _submit(contest_id, problem_id, file_path, lang_id)
+    _submit({
+      url = url,
+      file_path = file_path,
+      lang_id = lang_id,
+    })
   end
 
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == 'atcoder' then
@@ -359,7 +334,7 @@ local function submit_with_test()
   if info == nil then
     return
   end
-  _submit_with_test(info.contest_id, info.problem_id, info.file_path, info.lang_id)
+  _submit_with_test(info.url, info.file_path, info.lang_id)
 end
 
 local function setup_cmds()
@@ -427,8 +402,9 @@ end
 function M.insert_problem_url()
   local contest_id = utils.get_dirname()
   local problem_id = contest_id .. '_' .. utils.get_filename_without_ext()
-  local url = string.format(vim.o.commentstring, generate_problem_url(contest_id, problem_id))
-  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url })
+  local url = string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
+  local url_line = string.format(vim.o.commentstring, url)
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url_line })
 end
 
 function M.create_test_dir()
