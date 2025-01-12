@@ -7,6 +7,7 @@ local utils = require('atcoder.utils')
 ---@field command fun(cfg:BuildConfig): string
 ---@field dap_config fun(cfg:DebugConfig): DapConfig
 ---@field id integer
+---@field aoj_id string
 
 ---@class BuildConfig
 ---@field file_path string
@@ -88,6 +89,7 @@ local lang = {
       })
     end,
     id = 5028, -- C++ 23
+    aoj_id = 'C++23',
   },
   python = {
     build = nil, -- use default fn
@@ -109,6 +111,7 @@ local lang = {
       }
     end,
     id = 5078, -- pypy3
+    aoj_id = 'PyPy3',
   },
 }
 
@@ -128,6 +131,7 @@ function M.get_option(filetype)
     command = cfg.command,
     dap_config = cfg.dap_config,
     id = cfg.id,
+    aoj_id = cfg.aoj_id,
   }
 end
 

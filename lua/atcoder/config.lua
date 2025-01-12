@@ -93,4 +93,6 @@ function M.codelldb()
   return vim.fs.joinpath(config.codelldb_path, 'extension', 'adapter', 'codelldb')
 end
 
+M.cache_to = cache_to
+
 return M

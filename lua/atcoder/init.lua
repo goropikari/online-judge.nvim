@@ -1,4 +1,5 @@
 local atcoder = require('atcoder.service.atcoder')
+local aoj = require('atcoder.service.aoj')
 local config = require('atcoder.config')
 local lang = require('atcoder.language')
 local test_result = require('atcoder.test_result')
@@ -15,11 +16,6 @@ local nopfn = function(_) end
 ---@class State
 ---@field test_result_viewer TestResultViewer
 local state = {}
-
----@return string
-local function get_test_dirname()
-  return vim.fs.joinpath(vim.fn.expand('%:p:h'), '/test_' .. utils.get_filename_without_ext())
-end
 
 ---@param url string
 ---@param test_dirname string
@@ -67,7 +63,7 @@ end
 ---@param callback fun(cfg:{test_dirname:string})
 local function download_tests(callback)
   local url = utils.get_problem_url()
-  local test_dirname = get_test_dirname()
+  local test_dirname = utils.get_test_dirname(vim.fn.expand('%:p'))
   _download_tests(url, test_dirname, function(opts)
     callback = callback or nopfn
     opts = opts or {}
@@ -162,6 +158,7 @@ local function execute_test(callback)
   assert(build_fn, 'build_fn is nil')
   local cmd_fn = lang_opt.command
   local lang_id = lang_opt.id
+  local aoj_lang_id = lang_opt.aoj_id
 
   local url = utils.get_problem_url()
   if url == '' then
@@ -170,13 +167,14 @@ local function execute_test(callback)
   end
 
   local file_path = utils.get_absolute_path()
-  local test_dirname = get_test_dirname()
+  local test_dirname = utils.get_test_dirname(file_path)
 
   local ctx = {
     file_path = file_path,
     test_dirname = test_dirname,
     filetype = vim.bo.filetype,
     lang_id = lang_id,
+    aoj_lang_id = aoj_lang_id,
     url = url,
   }
   local command = cmd_fn(ctx)
@@ -189,22 +187,25 @@ end
 local function rerun_for_test_result_viewer(callback)
   callback = callback or nopfn
   local cfg = state.test_result_viewer:get_state()
-  local url = utils.get_problem_url()
-  local filetype = cfg.filetype
-  local test_dirname = cfg.test_dir_path
+  local url = cfg.url
   local file_path = cfg.file_path
-  local command = cfg.command
+  local test_dirname = utils.get_test_dirname(file_path)
+  local filetype = vim.filetype.match({ filename = file_path })
 
   local lang_opt = lang.get_option(filetype)
   local build_fn = lang_opt.build
   assert(build_fn, 'build_fn is nil')
+  local command = lang_opt.command({ file_path = file_path })
   local lang_id = lang_opt.id
+  local aoj_lang_id = lang_opt.aoj_id
 
   local ctx = {
     file_path = file_path,
     test_dirname = test_dirname,
     filetype = filetype,
     lang_id = lang_id,
+    aoj_lang_id = aoj_lang_id,
+    url = url,
   }
 
   test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
@@ -218,16 +219,24 @@ local function test()
   execute_test(nopfn)
 end
 
----@return {url:string,file_path:string,lang_id:integer}|nil
+---@class SubmitInfo
+---@field url string
+---@field file_path string
+---@field lang_id integer
+---@field aoj_lang_id string
+
+---@return SubmitInfo|nil
 local function prepare_submit_info()
   local url = ''
   local file_path = ''
+  local filetype = ''
   local lang_id = 0
+  local aoj_lang_id = ''
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
     local viewer_state = state.test_result_viewer:get_state()
     url = viewer_state.url
     file_path = viewer_state.file_path
-    lang_id = viewer_state.lang_id
+    filetype = vim.filetype.match({ filename = file_path })
   else
     url = utils.get_problem_url()
     if url == '' then
@@ -235,21 +244,29 @@ local function prepare_submit_info()
       return nil
     end
     file_path = utils.get_absolute_path()
-    lang_id = lang.get_option(vim.bo.filetype).id
+    filetype = vim.bo.filetype
   end
+  local lang_opt = lang.get_option(filetype)
+  lang_id = lang_opt.id
+  aoj_lang_id = lang_opt.aoj_id
+  local test_dirname = utils.get_test_dirname(file_path)
 
   return {
     url = url,
     file_path = file_path,
     lang_id = lang_id,
+    aoj_lang_id = aoj_lang_id,
+    test_dirname = test_dirname,
+    filetype = filetype,
   }
 end
 
----@param opts {url:string,file_path:string,lang_id:integer,aoj_lang_id:string}
+---@param opts SubmitInfo
 local function _submit(opts)
   local url = opts.url
   local file_path = opts.file_path
   local lang_id = opts.lang_id
+  local aoj_lang_id = opts.aoj_lang_id
   if os.getenv('ONLINE_JUDGE_FORCE_SUBMISSION') ~= '1' then
     local confirm = vim.fn.input('submit [y/N]: ')
     confirm = string.lower(confirm)
@@ -258,7 +275,13 @@ local function _submit(opts)
     end
   end
 
-  atcoder.submit(url, file_path, lang_id)
+  if url:match('https://atcoder.jp') then
+    atcoder.submit(url, file_path, lang_id)
+  elseif url:match('https://onlinejudge.u%-aizu.ac.jp') then
+    aoj.submit(url, file_path, aoj_lang_id)
+  else
+    utils.notify('Unsupported url: ' .. (url or 'nil'), vim.log.levels.ERROR)
+  end
 end
 
 local function submit()
@@ -266,23 +289,13 @@ local function submit()
   if info == nil then
     return
   end
-  _submit({
-    url = info.url,
-    file_path = info.file_path,
-    lang_id = info.lang_id,
-  })
+  _submit(info)
 end
 
----@param url string
----@param file_path string
----@param lang_id integer
-local function _submit_with_test(url, file_path, lang_id)
+---@param opts SubmitInfo
+local function _submit_with_test(opts)
   local callback = function()
-    _submit({
-      url = url,
-      file_path = file_path,
-      lang_id = lang_id,
-    })
+    _submit(opts)
   end
 
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
@@ -297,7 +310,7 @@ local function submit_with_test()
   if info == nil then
     return
   end
-  _submit_with_test(info.url, info.file_path, info.lang_id)
+  _submit_with_test(info)
 end
 
 local function setup_cmds()
@@ -371,7 +384,7 @@ function M.insert_problem_url()
 end
 
 function M.create_test_dir()
-  local dirname = get_test_dirname()
+  local dirname = utils.get_test_dirname(vim.fn.expand('%:p'))
   vim.fn.mkdir(dirname, 'p')
   local test_prefix = vim.fs.joinpath(dirname, 'custom-1.')
   vim.system({ 'touch', test_prefix .. 'in' })

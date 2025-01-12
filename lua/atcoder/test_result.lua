@@ -35,6 +35,7 @@ M.buf_filetype = buf_filetype
 ---@field test_dir_path string
 ---@field filetype string
 ---@field lang_id integer
+---@field aoj_lang_id integer
 ---@field url string
 
 ---@class TestResult
@@ -44,6 +45,7 @@ M.buf_filetype = buf_filetype
 ---@field test_dir_path string
 ---@field filetype string
 ---@field lang_id integer
+---@field aoj_lang_id integer
 ---@field url string
 
 function M.new()
@@ -110,6 +112,7 @@ function M.new()
     self.test_dir_path = test_result.test_dir_path
     self.filetype = test_result.filetype
     self.lang_id = test_result.lang_id
+    self.aoj_lang_id = test_result.aoj_lang_id
     self.url = test_result.url
     local lines = test_result.result
     for i, line in ipairs(lines) do
@@ -180,6 +183,7 @@ function M.new()
       test_dir_path = self.test_dir_path,
       filetype = self.filetype,
       lang_id = self.lang_id,
+      aoj_lang_id = self.aoj_lang_id,
       url = self.url,
     }
   end

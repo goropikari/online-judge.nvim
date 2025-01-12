@@ -26,6 +26,14 @@ function M.get_absolute_path()
   return vim.fn.expand('%:p')
 end
 
+---@return string
+function M.get_test_dirname(file_path)
+  file_path = vim.fn.fnamemodify(file_path, ':p')
+  local dirname = vim.fn.fnamemodify(file_path, ':h')
+  local file_name_without_ext = vim.fn.fnamemodify(file_path, ':t:r')
+  return vim.fs.joinpath(dirname, '/test_' .. file_name_without_ext)
+end
+
 function M.count_prefix_files(dir_path, prefix_pattern)
   local count = 0
   local dir = vim.uv.fs_scandir(dir_path)
