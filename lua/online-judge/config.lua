@@ -23,10 +23,6 @@ end
 ---@field codelldb_path string
 ---@field cache_dir string
 ---@field out_dirpath string
----@field contest_problem string
----@field problems string
----@field contest_problem_csv string
----@field problems_csv string
 ---@field define_cmds boolean
 ---@field lang {string:LanguageOption}
 
@@ -38,13 +34,7 @@ local default_config = {
     mle = 1024, -- mega byte
   },
   codelldb_path = mason_path('codelldb'),
-
-  out_dirpath = '/tmp/atcoder/',
-
-  contest_problem = cache_to('/contest-problem.json'),
-  problems = cache_to('/problems.json'),
-  contest_problem_csv = cache_to('contest-problem.csv'),
-  problems_csv = cache_to('/problems.csv'),
+  out_dirpath = '/tmp/online-judge.nvim/',
   define_cmds = true,
   lang = {},
   cache_dir = cache_dir,

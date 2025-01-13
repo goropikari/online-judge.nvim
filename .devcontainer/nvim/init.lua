@@ -48,6 +48,17 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   spec = {
     {
+      'neanias/everforest-nvim',
+      version = false,
+      lazy = false,
+      priority = 1000, -- make sure to load this before all the other start plugins
+      -- Optional; default configuration will be used if setup isn't called.
+      config = function()
+        require('everforest').setup({})
+        vim.cmd([[colorscheme everforest]])
+      end,
+    },
+    {
       'mfussenegger/nvim-dap',
       version = '0.8.0',
       dependencies = {
@@ -154,12 +165,9 @@ require('lazy').setup({
         'williamboman/mason.nvim',
       },
       opts = {
-        ensure_installed = { 'codelldb', 'cpptools' },
+        ensure_installed = { 'codelldb' },
       },
     },
   },
-  install = { colorscheme = { 'habamax' } },
   checker = { enabled = true },
 })
-
-vim.cmd('colorscheme habamax')

@@ -1,6 +1,6 @@
 # online-judge.nvim
 
-A Neovim plugin to streamline AtCoder contest workflows, including test case downloads, execution, and submissions.
+A Neovim plugin to streamline AtCoder/AOJ contest workflows, including test case downloads, execution, and submissions.
 
 **Note**
 This plugin has only been tested with past problems. It has not been used or verified during ongoing contests.
@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/47aea616-c5cf-4651-b99d-21d06fab4156
 
 
 ## Features
-- **Download test cases** for AtCoder problems.
+- **Download test cases** for AtCoder/AOJ problems.
 - **Execute tests** and check against sample cases.
 - **Submit code** directly from Neovim.
 
@@ -20,6 +20,7 @@ https://github.com/user-attachments/assets/47aea616-c5cf-4651-b99d-21d06fab4156
 # Requirements
 - Neovim 0.10+
 - [online-judge-tools](https://github.com/online-judge-tools/oj)
+- curl
 
 ## Installation
 Using [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -60,21 +61,23 @@ sudo apt-get install time
 ## Commands/API
 The plugin provides the following commands:
 
-| Command                        | Description                                                        |
-| -----------------------------  | ------------------------------------                               |
-| `:AtCoder test`                | Run sample test cases.                                             |
-| `:AtCoder submit`              | Submit the code.                                                   |
-| `:AtCoder download_tests`      | Download test cases.                                               |
-| `:AtCoder login`               | Log in to AtCoder. Required for submission                         |
+| Command                       | Description                                |
+| ----------------------------- | ------------------------------------       |
+| `:OnlineJudge test`           | Run sample test cases.                     |
+| `:OnlineJudge submit`         | Submit the code.                           |
+| `:OnlineJudge download_tests` | Download test cases.                       |
+| `:OnlineJudge atcoder_login`  | Log in to AtCoder. Required for submission |
+| `:OnlineJudge aoj_login`      | Log in to AOJ. Required for submission     |
 
 
-| API                                                     | Description                                                                                                                            |
-| -----------------------------                           | ------------------------------------                                                                                                   |
-| `:lua require('online-judge').test()`                        | Run sample test cases.                                                                                                                 |
-| `:lua require('online-judge').submit()`                      | Submit the code.                                                                                                                       |
-| `:lua require('online-judge').download_tests()`              | Download test cases.                                                                                                                   |
-| `:lua require('online-judge').login()`                       | Log in to AtCoder. Required for submission                                                                                             |
-| `:lua require('online-judge').insert_problem_url()`          | Insert problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
+| API                                                 | Description                                                                                                                                                                       |
+| -----------------------------                       | ------------------------------------                                                                                                                                              |
+| `:lua require('online-judge').test()`               | Run sample test cases.                                                                                                                                                            |
+| `:lua require('online-judge').submit()`             | Submit the code.                                                                                                                                                                  |
+| `:lua require('online-judge').download_tests()`     | Download test cases.                                                                                                                                                              |
+| `:lua require('online-judge').atcoder_login()`      | Log in to AtCoder. Required for submission                                                                                                                                        |
+| `:lua require('online-judge').aoj_login()`          | Log in to AOJ. Required for submission                                                                                                                                            |
+| `:lua require('online-judge').insert_problem_url()` | Insert AtCoder problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
 
 
 
@@ -86,7 +89,7 @@ To download test cases, you need to add the problem URL to the first line of you
 Then run:
 
 ```vim
-:AtCoder download_tests
+:OnlineJudge download_tests
 ```
 
 ### Run Sample Tests
@@ -95,13 +98,13 @@ If test cases have not been downloaded, they will be downloaded automatically.
 
 Run:
 ```vim
-:AtCoder test
+:OnlineJudge test
 ```
 
 ### Submit Code
 Run the following command to submit:
 ```vim
-:AtCoder submit
+:OnlineJudge submit
 ```
 
 ## Customization
@@ -150,7 +153,8 @@ You can extend or customize supported languages in the `setup()` function:
                     args = { cfg.input_test_file_path },
                   }
                 end,
-                id = 5078, -- pypy3
+                atcoder_lang_id = 5078, -- pypy3
+                aoj_lang_id = 'PyPy3',
             }
         }
     },

@@ -6,8 +6,8 @@ local utils = require('online-judge.utils')
 ---@field build fun(cfg:BuildConfig, callback:function)?
 ---@field command fun(cfg:BuildConfig): string
 ---@field dap_config fun(cfg:DebugConfig): DapConfig
----@field id integer
----@field aoj_id string
+---@field atcoder_lang_id integer
+---@field aoj_lang_id string
 
 ---@class BuildConfig
 ---@field file_path string
@@ -83,13 +83,13 @@ local lang = {
       }
 
       return vim.tbl_deep_extend('force', base_config, {
-        type = 'atcoder_codelldb',
+        type = 'oneline_judge_codelldb',
         stdio = { cfg.input_test_file_path },
         expressions = 'native',
       })
     end,
-    id = 5028, -- C++ 23
-    aoj_id = 'C++23',
+    atcoder_lang_id = 5028, -- C++ 23
+    aoj_lang_id = 'C++23',
   },
   python = {
     build = nil, -- use default fn
@@ -110,8 +110,8 @@ local lang = {
         --     sys.stdin = open(sys.argv[1])
       }
     end,
-    id = 5078, -- pypy3
-    aoj_id = 'PyPy3',
+    atcoder_lang_id = 5078, -- pypy3
+    aoj_lang_id = 'PyPy3',
   },
 }
 
@@ -130,8 +130,8 @@ function M.get_option(filetype)
     build = cfg.build,
     command = cfg.command,
     dap_config = cfg.dap_config,
-    id = cfg.id,
-    aoj_id = cfg.aoj_id,
+    atcoder_lang_id = cfg.atcoder_lang_id,
+    aoj_lang_id = cfg.aoj_lang_id,
   }
 end
 

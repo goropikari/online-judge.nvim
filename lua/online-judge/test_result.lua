@@ -25,7 +25,6 @@ M.buf_filetype = buf_filetype
 ---@field bufnr integer
 ---@field test_case_preview_length {string:integer}
 ---@field test_case_display_length {string:integer}
----@field origin_dap_adapters {string:dap.Adapter}
 ---@field spin Spinner
 ---@field rerun_fn function
 ---@field submit_fn function
@@ -33,14 +32,12 @@ M.buf_filetype = buf_filetype
 ---@field file_path string
 ---@field command string
 ---@field test_dir_path string
----@field url string
 
 ---@class TestResult
 ---@field file_path string
 ---@field command string
----@field result string[]
 ---@field test_dir_path string
----@field url string
+---@field result string[]
 
 function M.new()
   ---@type TestResultViewer
@@ -56,7 +53,6 @@ function M.new()
     file_path = '',
     command = '',
     test_dir_path = '',
-    origin_dap_adapters = {},
   }
   obj.spin = spinner.new(obj.bufnr)
 
@@ -104,7 +100,6 @@ function M.new()
     self.file_path = test_result.file_path
     self.command = test_result.command
     self.test_dir_path = test_result.test_dir_path
-    self.url = test_result.url
     local lines = test_result.result
     for i, line in ipairs(lines) do
       line = line:gsub('^%[%w+%]%s', '')
@@ -172,7 +167,6 @@ function M.new()
       file_path = self.file_path,
       command = self.command,
       test_dir_path = self.test_dir_path,
-      url = self.url,
     }
   end
 

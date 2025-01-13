@@ -131,6 +131,7 @@ function M.submit(url, file_path, lang_id)
         local status_url =
           string.format('https://onlinejudge.u-aizu.ac.jp/status/users/%s/submissions/1/%s/judge/%s/%s', res.userId, res.problemId, res.judgeId, res.language)
         vim.ui.open(status_url)
+        utils.notify('Submitted ' .. status_url, vim.log.levels.INFO)
       end),
       1000
     )

@@ -1,5 +1,5 @@
-local atcoder = require('online-judge.service.atcoder')
 local aoj = require('online-judge.service.aoj')
+local atcoder = require('online-judge.service.atcoder')
 local config = require('online-judge.config')
 local lang = require('online-judge.language')
 local test_result = require('online-judge.test_result')
@@ -19,13 +19,16 @@ local state = {}
 
 ---@param url string
 ---@param test_dirname string
----@param callback fun(cfg:{test_dirname:string})
+---@param callback fun(opts:vim.SystemCompleted)
 local function _download_tests(url, test_dirname, callback)
   if vim.fn.isdirectory(test_dirname) == 1 then
     utils.notify('test files are already downloaded')
     if type(callback) == 'function' then
       callback({
-        test_dirname = test_dirname,
+        code = 0,
+        stdout = 'test files are already downloaded',
+        stderr = '',
+        signal = 0,
       })
     end
     return
@@ -37,33 +40,23 @@ local function _download_tests(url, test_dirname, callback)
   end
   local cmd = {
     oj(),
-    'd',
+    'download',
     url,
     '--directory',
     test_dirname,
   }
   async.void(function()
     local out = utils.async_system(cmd)
-    if out.code ~= 0 then
-      -- oj の log は stdout に出る
-      utils.notify(out.stdout, vim.log.levels.ERROR)
-      utils.notify(out.stderr, vim.log.levels.ERROR)
-      return
-    end
-    utils.notify('Download tests of ' .. url)
-
-    if type(callback) == 'function' then
-      callback({
-        test_dirname = test_dirname,
-      })
-    end
+    callback = callback or nopfn
+    callback(out)
   end)()
 end
 
----@param callback fun(cfg:{test_dirname:string})
+---@param callback fun(opts:vim.SystemCompleted)
 local function download_tests(callback)
-  local url = utils.get_problem_url()
-  local test_dirname = utils.get_test_dirname(vim.fn.expand('%:p'))
+  local file_path = utils.get_absolute_path()
+  local url = utils.get_problem_url(file_path)
+  local test_dirname = utils.get_test_dirname(file_path)
   _download_tests(url, test_dirname, function(opts)
     callback = callback or nopfn
     opts = opts or {}
@@ -71,16 +64,21 @@ local function download_tests(callback)
   end)
 end
 
+---@class TestCompleted : vim.SystemCompleted
+---@field result string[] result of oj test result
+
 ---@param test_dirname string
----@param file_path string
 ---@param command string
----@param callback fun(opts:{code:integer, test_dir_path:string, file_path:string, command:string, result:string[], stderr:string})
-local function _execute_test(test_dirname, file_path, command, callback)
-  state.test_result_viewer:reset_test_cases()
+---@param callback fun(opts:TestCompleted)
+local function execute_test(test_dirname, command, callback)
+  callback = callback or nopfn
+
   async.void(function()
+    state.test_result_viewer:reset_test_cases()
+
     local cmd = {
       oj(),
-      't',
+      'test',
       '--error',
       '1e-6',
       '--tle',
@@ -93,99 +91,22 @@ local function _execute_test(test_dirname, file_path, command, callback)
     if vim.fn.executable('time') == 1 then -- `sudo apt-get install time`
       vim.list_extend(cmd, { '--mle', config.mle() })
     end
-    -- vim.print(cmd)
+
     local out = utils.async_system(cmd)
     vim.schedule(function()
-      callback = callback or nopfn
-      callback({
-        code = out.code,
-        test_dir_path = test_dirname,
-        file_path = file_path,
-        command = command,
+      out = vim.tbl_deep_extend('force', out, {
         result = vim.split(out.stdout, '\n'),
-        stderr = out.stderr,
       })
+      callback(out)
     end)
   end)()
 end
 
----@class TestContext: BuildConfig
----@field test_dirname string
----@field command string
-
----@param ctx TestContext
----@param build_fn fun(cfg:BuildConfig, callback:function)
----@param url string
----@param test_dirname string
----@param command string
----@param file_path string
----@param callback function
-local function test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
-  state.test_result_viewer:start_spinner()
-  build_fn(ctx, function(post_build)
-    ctx = vim.tbl_deep_extend('force', ctx, post_build or {})
-    vim.schedule(function()
-      async.void(function()
-        local download_tests_async = async.wrap(_download_tests, 3)
-        local _execute_test_async = async.wrap(_execute_test, 4)
-
-        local download_res = download_tests_async(url, test_dirname)
-        ctx = vim.tbl_deep_extend('force', ctx, download_res or {})
-
-        ---@type {code:integer,test_dir_path:string,file_path:string,command:string,result:string[],stderr:string}
-        local test_res = _execute_test_async(test_dirname, file_path, command)
-        ctx = vim.tbl_deep_extend('force', ctx, test_res or {})
-
-        state.test_result_viewer:stop_spinner()
-
-        ctx = vim.tbl_deep_extend('force', ctx, test_res)
-        state.test_result_viewer:update(ctx)
-
-        if test_res.code == 0 then
-          callback(ctx)
-        end
-      end)()
-    end)
-  end)
-end
-
 -- execute callback if pass the tests
----@param callback fun(opts:{file_path:string, test_dirname:string, filetype:string, code:integer, test_dir_path:string, file_path:string,command:string,result:string[],stderr:string})
-local function execute_test(callback)
+---@param callback fun(TestCompleted)
+local function build_download_test(file_path, callback)
   callback = callback or nopfn
-  local lang_opt = lang.get_option()
-  local build_fn = lang_opt.build
-  assert(build_fn, 'build_fn is nil')
-  local cmd_fn = lang_opt.command
 
-  local url = utils.get_problem_url()
-  if url == '' then
-    utils.notify('problem url is required', vim.log.levels.ERROR)
-    return
-  end
-
-  local file_path = utils.get_absolute_path()
-  local test_dirname = utils.get_test_dirname(file_path)
-
-  local ctx = {
-    file_path = file_path,
-    test_dirname = test_dirname,
-    filetype = vim.bo.filetype,
-    url = url,
-  }
-  local command = cmd_fn(ctx)
-  ctx.command = command
-
-  state.test_result_viewer:open()
-  test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
-end
-
-local function rerun_for_test_result_viewer(callback)
-  callback = callback or nopfn
-  local cfg = state.test_result_viewer:get_state()
-  local url = cfg.url
-  local file_path = cfg.file_path
-  local test_dirname = utils.get_test_dirname(file_path)
   local filetype = utils.get_filetype(file_path)
 
   local lang_opt = lang.get_option(filetype)
@@ -193,63 +114,82 @@ local function rerun_for_test_result_viewer(callback)
   assert(build_fn, 'build_fn is nil')
   local command = lang_opt.command({ file_path = file_path })
 
-  local ctx = {
-    file_path = file_path,
-    test_dirname = test_dirname,
-    filetype = filetype,
-    url = url,
-  }
+  local url = utils.get_problem_url(file_path)
+  if url == '' then
+    utils.notify('problem url is required', vim.log.levels.ERROR)
+    return
+  end
+  local test_dir_path = utils.get_test_dirname(file_path)
 
-  test_sequence(ctx, build_fn, url, test_dirname, command, file_path, callback)
+  state.test_result_viewer:open()
+  state.test_result_viewer:start_spinner()
+  build_fn({ file_path = file_path }, function(post_build)
+    vim.schedule(function()
+      async.void(function()
+        local download_tests_async = async.wrap(_download_tests, 3)
+        local _execute_test_async = async.wrap(execute_test, 3)
+
+        local download_res = download_tests_async(url, test_dir_path)
+        if download_res.code ~= 0 then
+          state.test_result_viewer:stop_spinner()
+          utils.notify('failed to download tests', vim.log.levels.ERROR)
+          return
+        end
+
+        local test_res = _execute_test_async(test_dir_path, command)
+
+        state.test_result_viewer:stop_spinner()
+        state.test_result_viewer:update({
+          file_path = file_path,
+          command = command,
+          test_dir_path = test_dir_path,
+          result = test_res.result,
+        })
+
+        callback(test_res)
+      end)()
+    end)
+  end)
 end
 
 local function test()
+  local file_path = utils.get_absolute_path()
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
-    rerun_for_test_result_viewer(nopfn)
-    return
+    file_path = state.test_result_viewer:get_state().file_path
   end
-  execute_test(nopfn)
+  build_download_test(file_path, nopfn)
 end
 
 ---@class SubmitInfo
----@field url string
----@field file_path string
----@field lang_id integer
 ---@field aoj_lang_id string
+---@field atcoder_lang_id integer
+---@field file_path string
+---@field url string
 
 ---@return SubmitInfo|nil
 local function prepare_submit_info()
-  local url = ''
-  local file_path = ''
-  local filetype = ''
-  local lang_id = 0
-  local aoj_lang_id = ''
+  local file_path = utils.get_absolute_path()
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
     local viewer_state = state.test_result_viewer:get_state()
-    url = viewer_state.url
     file_path = viewer_state.file_path
-    filetype = utils.get_filetype(file_path)
-  else
-    url = utils.get_problem_url()
-    if url == '' then
-      utils.notify('problem url is required', vim.log.levels.ERROR)
-      return nil
-    end
-    file_path = utils.get_absolute_path()
-    filetype = vim.bo.filetype
   end
+
+  local url = utils.get_problem_url(file_path)
+  if url == '' then
+    utils.notify('problem url is required', vim.log.levels.ERROR)
+    return nil
+  end
+
+  local filetype = utils.get_filetype(file_path)
   local lang_opt = lang.get_option(filetype)
-  lang_id = lang_opt.id
-  aoj_lang_id = lang_opt.aoj_id
-  local test_dirname = utils.get_test_dirname(file_path)
+  local atcoder_lang_id = lang_opt.atcoder_lang_id
+  local aoj_lang_id = lang_opt.aoj_lang_id
 
   return {
-    url = url,
-    file_path = file_path,
-    lang_id = lang_id,
     aoj_lang_id = aoj_lang_id,
-    test_dirname = test_dirname,
-    filetype = filetype,
+    atcoder_lang_id = atcoder_lang_id,
+    file_path = file_path,
+    url = url,
   }
 end
 
@@ -257,8 +197,9 @@ end
 local function _submit(opts)
   local url = opts.url
   local file_path = opts.file_path
-  local lang_id = opts.lang_id
+  local lang_id = opts.atcoder_lang_id
   local aoj_lang_id = opts.aoj_lang_id
+
   if os.getenv('ONLINE_JUDGE_FORCE_SUBMISSION') ~= '1' then
     local confirm = vim.fn.input('submit [y/N]: ')
     confirm = string.lower(confirm)
@@ -287,14 +228,16 @@ end
 ---@param opts SubmitInfo
 local function _submit_with_test(opts)
   local callback = function()
-    _submit(opts)
+    vim.defer_fn(function()
+      _submit(opts)
+    end, 500)
   end
 
+  local file_path = utils.get_absolute_path()
   if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
-    rerun_for_test_result_viewer(callback)
-  else
-    execute_test(callback)
+    file_path = state.test_result_viewer:get_state().file_path
   end
+  build_download_test(file_path, callback)
 end
 
 local function submit_with_test()
@@ -307,13 +250,14 @@ end
 
 local function setup_cmds()
   local fns = {
+    aoj_login = aoj.login,
+    atcoder_login = atcoder.login,
     test = test,
     submit = submit,
     submit_with_test = submit_with_test,
     download_tests = function()
       download_tests(nopfn)
     end,
-    login = atcoder.login,
   }
 
   vim.api.nvim_create_user_command('OnlineJudge', function(opts)
@@ -322,11 +266,12 @@ local function setup_cmds()
     ---@diagnostic disable-next-line
     complete = function(arg_lead, cmd_line, cursor_pos)
       return {
+        'aoj_login',
+        'atcoder_login',
         'test',
         'submit',
         'submit_with_test',
         'download_tests',
-        'login',
       }
     end,
     nargs = 1,
@@ -345,7 +290,7 @@ function M.setup(opts)
   vim.fn.mkdir(cfg.cache_dir, 'p')
 
   state.test_result_viewer = test_result.new()
-  state.test_result_viewer:register_rerun_fn(rerun_for_test_result_viewer)
+  state.test_result_viewer:register_rerun_fn(test)
   state.test_result_viewer:register_submit_fn(submit_with_test)
   if cfg.define_cmds then
     setup_cmds()
@@ -355,7 +300,8 @@ end
 M._download_tests = _download_tests
 M.download_tests = download_tests
 M.test = test
-M.login = atcoder.login
+M.atcoder_login = atcoder.login
+M.aoj_login = aoj.login
 M.submit_with_test = submit_with_test
 M.open = function()
   state.test_result_viewer:open()
