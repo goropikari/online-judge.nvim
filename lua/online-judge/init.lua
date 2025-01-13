@@ -230,7 +230,7 @@ local function _submit_with_test(opts)
   local callback = function()
     vim.defer_fn(function()
       _submit(opts)
-    end, 500)
+    end, 200)
   end
 
   local file_path = utils.get_absolute_path()
