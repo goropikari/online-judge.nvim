@@ -14,6 +14,7 @@ syntax match OnlineJudgeFailure /^test failed/
 highlight OnlineJudgeTestFile guifg=#33FFFF gui=bold
 syntax match OnlineJudgeTestFile /sample-\d\+$/
 syntax match OnlineJudgeTestFile /custom-\d\+$/
+syntax match OnlineJudgeTestFile /random-\d\+$/
 
 highlight OnlineJudgeIO guifg=#FFFF00 gui=bold
 syntax keyword OnlineJudgeIO input output expected

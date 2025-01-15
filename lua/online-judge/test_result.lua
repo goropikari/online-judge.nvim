@@ -105,13 +105,14 @@ function M.new()
       line = line:gsub('^%[%w+%]%s', '')
       line = line:gsub('^sample%-', '▷ sample%-')
       line = line:gsub('^custom%-', '▷ custom%-')
+      line = line:gsub('^random%-', '▷ random%-')
       lines[i] = line
     end
 
     local cnt = 1
     local prev_file = ''
     for _, v in ipairs(lines) do
-      local match_str = string.match(v, 'sample%-%d+$') or string.match(v, 'custom%-%d+$')
+      local match_str = string.match(v, 'sample%-%d+$') or string.match(v, 'custom%-%d+$') or string.match(v, 'random%-%d+$')
       if match_str then
         self.test_case_display_length[prev_file] = cnt
         prev_file = match_str
