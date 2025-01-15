@@ -44,6 +44,9 @@ function M.login()
       utils.notify(out.stderr, vim.log.levels.ERROR)
       return
     end
+    vim.schedule(function()
+      vim.fn.setfperm(session_file, 'rw-------')
+    end)
     utils.notify('Logged in', vim.log.levels.INFO)
   end)
 end
