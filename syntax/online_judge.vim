@@ -21,3 +21,6 @@ syntax keyword OnlineJudgeIO input output expected
 
 highlight OnlineJudgeProgram guifg=#66B2FF gui=bold
 syntax keyword OnlineJudgeProgram contest_id problem_id test_dir file_path command
+
+highlight OnlineJudgeBuildStatus guifg=#FFCC00 gui=bold
+syntax match OnlineJudgeBuildStatus /^Error Massage:/
