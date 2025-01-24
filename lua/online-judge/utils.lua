@@ -2,6 +2,10 @@ local M = {}
 
 local async = require('plenary.async')
 
+function M.executable(cmd)
+  return vim.fn.executable(cmd) == 1
+end
+
 function M.get_file_timestamp(file)
   local stat = vim.uv.fs_stat(file)
   if stat then

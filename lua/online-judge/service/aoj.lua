@@ -118,25 +118,50 @@ function M.submit(url, file_path, lang_id)
       return
     end
 
-    vim.defer_fn(
+    local res = vim.json.decode(out.stdout)
+    local token = res.token
+
+    local timer = vim.uv.new_timer()
+    timer:start(
+      1000,
+      1500,
       async.void(function()
-        out = utils.async_system({
+        local recent_submissions = utils.async_system({
           'curl',
           '-b',
           session_file,
-          api_path('/submission_records/users/goropikari?page=0&size=1'),
+          api_path('/submission_records/recent'),
         })
-        if out.code ~= 0 then
-          utils.notify(out.stderr, vim.log.levels.ERROR)
+
+        if recent_submissions.code ~= 0 then
+          utils.notify(recent_submissions.stderr, vim.log.levels.ERROR)
           return
         end
-        local res = vim.json.decode(out.stdout)[1]
-        local status_url =
-          string.format('https://onlinejudge.u-aizu.ac.jp/status/users/%s/submissions/1/%s/judge/%s/%s', res.userId, res.problemId, res.judgeId, res.language)
-        vim.ui.open(status_url)
-        utils.notify('Submitted ' .. status_url, vim.log.levels.INFO)
-      end),
-      1000
+
+        local submissions = vim.json.decode(recent_submissions.stdout)
+        for _, submission in ipairs(submissions) do
+          if submission.token == token then
+            if not (submission.status == 5 or submission.status == 9) then
+              local status_url = string.format(
+                'https://onlinejudge.u-aizu.ac.jp/status/users/%s/submissions/1/%s/judge/%s/%s',
+                submission.userId,
+                submission.problemId,
+                submission.judgeId,
+                submission.language
+              )
+
+              vim.ui.open(status_url)
+              utils.notify('Submitted: ' .. status_url, vim.log.levels.INFO)
+              if submission.status == 4 then
+                utils.notify('Accepted', vim.log.levels.INFO)
+              else
+                utils.notify('Failed', vim.log.levels.ERROR)
+              end
+              timer:close()
+            end
+          end
+        end
+      end)
     )
   end)()
 end

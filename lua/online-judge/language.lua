@@ -51,14 +51,14 @@ local lang = {
           '-o',
           exec_path,
           file_path,
-        }, { text = true }, function(_)
+        }, { text = true }, function(out)
           if type(callback) == 'function' then
-            callback(cfg)
+            callback(out)
           end
         end)
       else
         if type(callback) == 'function' then
-          callback(cfg)
+          callback({ code = 0 })
         end
       end
     end,

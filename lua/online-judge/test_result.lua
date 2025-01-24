@@ -488,4 +488,9 @@ function M.new()
   return obj
 end
 
+---@return boolean
+function M.is_in_test_result_buf()
+  return vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == buf_filetype
+end
+
 return M

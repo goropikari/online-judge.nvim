@@ -4,10 +4,10 @@ local config = require('online-judge.config')
 local lang = require('online-judge.language')
 local test_result = require('online-judge.test_result')
 local utils = require('online-judge.utils')
+local io = require('online-judge.io')
 
 local debug = require('online-judge.debug')
 local async = require('plenary.async')
-local oj = config.oj
 
 local M = {}
 
@@ -21,25 +21,31 @@ local state = {}
 ---@param test_dirname string
 ---@param callback fun(opts:vim.SystemCompleted)
 local function _download_tests(url, test_dirname, callback)
-  if vim.fn.isdirectory(test_dirname) == 1 then
+  callback = callback or nopfn
+
+  if io.isdirectory(test_dirname) then
     utils.notify('test files are already downloaded')
-    if type(callback) == 'function' then
-      callback({
-        code = 0,
-        stdout = 'test files are already downloaded',
-        stderr = '',
-        signal = 0,
-      })
-    end
+    callback({
+      code = 0,
+      stdout = 'test files are already downloaded',
+      stderr = '',
+      signal = 0,
+    })
     return
   end
 
   if url == '' then
-    utils.notify(url .. ' is not written', vim.log.levels.ERROR)
+    utils.notify('url is not written', vim.log.levels.ERROR)
+    callback({
+      code = 1,
+      stdout = '',
+      stderr = 'url is not written',
+      signal = 0,
+    })
     return
   end
   local cmd = {
-    oj(),
+    config.oj(),
     'download',
     url,
     '--directory',
@@ -47,7 +53,6 @@ local function _download_tests(url, test_dirname, callback)
   }
   async.void(function()
     local out = utils.async_system(cmd)
-    callback = callback or nopfn
     callback(out)
   end)()
 end
@@ -74,10 +79,8 @@ local function execute_test(test_dirname, command, callback)
   callback = callback or nopfn
 
   async.void(function()
-    state.test_result_viewer:reset_test_cases()
-
     local cmd = {
-      oj(),
+      config.oj(),
       'test',
       '--error',
       '1e-6',
@@ -102,6 +105,8 @@ local function execute_test(test_dirname, command, callback)
   end)()
 end
 
+M._execute_test = execute_test
+
 -- execute callback if pass the tests
 ---@param callback fun(TestCompleted)
 local function build_download_test(file_path, callback)
@@ -123,7 +128,29 @@ local function build_download_test(file_path, callback)
 
   state.test_result_viewer:open()
   state.test_result_viewer:start_spinner()
-  build_fn({ file_path = file_path }, function(post_build)
+  build_fn({ file_path = file_path }, function(out)
+    if out.code ~= 0 then
+      vim.schedule(function()
+        vim.defer_fn(function()
+          state.test_result_viewer:stop_spinner()
+          state.test_result_viewer:update({
+            file_path = file_path,
+            command = command,
+            test_dir_path = test_dir_path,
+            result = vim
+              .iter({
+                'Error Massage:',
+                vim.fn.split(out.stderr, '\n'),
+              })
+              :flatten()
+              :totable(),
+          })
+        end, 200)
+        utils.notify('failed to build', vim.log.levels.ERROR)
+        utils.notify(out.stderr, vim.log.levels.ERROR)
+      end)
+      return
+    end
     vim.schedule(function()
       async.void(function()
         local download_tests_async = async.wrap(_download_tests, 3)
@@ -136,6 +163,7 @@ local function build_download_test(file_path, callback)
           return
         end
 
+        state.test_result_viewer:reset_test_cases()
         local test_res = _execute_test_async(test_dir_path, command)
 
         state.test_result_viewer:stop_spinner()
@@ -169,7 +197,7 @@ end
 ---@return SubmitInfo|nil
 local function prepare_submit_info()
   local file_path = utils.get_absolute_path()
-  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
+  if test_result.is_in_test_result_buf() then
     local viewer_state = state.test_result_viewer:get_state()
     file_path = viewer_state.file_path
   end
@@ -192,6 +220,8 @@ local function prepare_submit_info()
     url = url,
   }
 end
+
+M._prepare_submit_info = prepare_submit_info
 
 ---@param opts SubmitInfo
 local function _submit(opts)
@@ -217,6 +247,8 @@ local function _submit(opts)
   end
 end
 
+M._submit = _submit
+
 local function submit()
   local info = prepare_submit_info()
   if info == nil then
@@ -234,7 +266,7 @@ local function _submit_with_test(opts)
   end
 
   local file_path = utils.get_absolute_path()
-  if vim.api.nvim_get_option_value('filetype', { buf = vim.api.nvim_get_current_buf() }) == test_result.buf_filetype then
+  if test_result.is_in_test_result_buf() then
     file_path = state.test_result_viewer:get_state().file_path
   end
   build_download_test(file_path, callback)
