@@ -106,13 +106,14 @@ function M.new()
       line = line:gsub('^sample%-', '▷ sample%-')
       line = line:gsub('^custom%-', '▷ custom%-')
       line = line:gsub('^random%-', '▷ random%-')
+      line = line:gsub('^example_', '▷ example_')
       lines[i] = line
     end
 
     local cnt = 1
     local prev_file = ''
     for _, v in ipairs(lines) do
-      local match_str = string.match(v, 'sample%-%d+$') or string.match(v, 'custom%-%d+$') or string.match(v, 'random%-%d+$')
+      local match_str = string.match(v, 'sample%-%d+$') or string.match(v, 'custom%-%d+$') or string.match(v, 'random%-%d+$') or string.match(v, 'example_%d+$')
       if match_str then
         self.test_case_display_length[prev_file] = cnt
         prev_file = match_str
@@ -181,8 +182,8 @@ function M.new()
   ---@return string
   ---@diagnostic disable-next-line
   function obj._test_file_prefix(self)
-    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+%-%d+') or ''
-    test_case = string.match(test_case, '%w+%-%d+') or ''
+    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+[%-_]%d+') or ''
+    test_case = string.match(test_case, '%w+[%-_]%d+') or ''
     return test_case
   end
 
@@ -298,7 +299,7 @@ function M.new()
 
   -- edit test case
   vim.keymap.set({ 'n' }, 'e', function()
-    if string.match(obj:_test_file_prefix(), '^sample%-') then
+    if string.match(obj:_test_file_prefix(), '^sample%-') or string.match(obj:_test_file_prefix(), '^example_') then
       utils.notify('could not edit sample test case. copy and then edit it.', vim.log.levels.WARN)
       return
     end
@@ -356,7 +357,7 @@ function M.new()
   -- delete test case
   vim.keymap.set({ 'n' }, 'D', function()
     local test_case = obj:_test_file_prefix()
-    if string.match(test_case, '^sample%-') then
+    if string.match(test_case, '^sample%-') or string.match(test_case, '^example_') then
       utils.notify('could not delete sample test case', vim.log.levels.WARN)
       return
     end
