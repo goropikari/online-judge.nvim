@@ -6,6 +6,13 @@ function M.executable(cmd)
   return vim.fn.executable(cmd) == 1
 end
 
+---@param str string
+---@param prefix string
+---@return boolean
+function M.has_prefix(str, prefix)
+  return str:sub(1, #prefix) == prefix
+end
+
 function M.get_file_timestamp(file)
   local stat = vim.uv.fs_stat(file)
   if stat then
