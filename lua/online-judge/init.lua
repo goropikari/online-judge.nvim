@@ -366,14 +366,6 @@ M.toggle = function()
   state.test_result_viewer:toggle()
 end
 
-function M.insert_problem_url()
-  local contest_id = utils.get_dirname()
-  local problem_id = contest_id .. '_' .. utils.get_filename_without_ext()
-  local url = string.format('https://atcoder.jp/contests/%s/tasks/%s', contest_id, problem_id)
-  local url_line = string.format(vim.o.commentstring, url)
-  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url_line })
-end
-
 function M.create_test_dir()
   local dirname = utils.get_test_dirname(vim.fn.expand('%:p'))
   vim.fn.mkdir(dirname, 'p')

@@ -166,4 +166,29 @@ function M.submit(url, file_path, lang_id)
   end)()
 end
 
+local course_data = {
+  ITP1 = { id = 2, name = 'プログラミング入門', type = 'lesson' },
+  ALDS1 = { id = 1, name = 'アルゴリズムとデータ構造入門', type = 'lesson' },
+  ITP2 = { id = 8, name = 'プログラミング応用', type = 'lesson' },
+  DSL = { id = 3, name = 'データの集合とクエリ処理', type = 'library' },
+  DPL = { id = 7, name = '組み合わせ最適化', type = 'library' },
+  GRL = { id = 5, name = 'グラフ', type = 'library' },
+  CGL = { id = 4, name = '計算幾何学', type = 'library' },
+  NTL = { id = 6, name = '整数論', type = 'library' },
+  INFO1 = { id = 9, name = '情報', type = 'lesson' },
+}
+
+function M.insert_problem_url()
+  local course = vim.fn.expand('%:p:h:t') -- ITP1, ALDS1, ...
+  local course_id = course_data[course].id
+  local course_type = course_data[course].type -- lesson, library
+  local file_name = vim.fn.expand('%:t:r') -- 1_A, ...
+  local topic_number = file_name:match('%d+') -- 1, 2, ...
+  local problem_id = course .. '_' .. file_name
+
+  local url = string.format('https://onlinejudge.u-aizu.ac.jp/courses/%s/%s/%s/%s/%s', course_type, course_id, course, topic_number, problem_id)
+  local url_line = string.format(vim.o.commentstring, url)
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, { url_line })
+end
+
 return M

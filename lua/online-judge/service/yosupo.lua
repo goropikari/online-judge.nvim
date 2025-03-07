@@ -28,4 +28,11 @@ function M.submit(url, file_path, lang_id)
   end)()
 end
 
+function M.insert_problem_url()
+  local name = vim.fn.expand('%:p:t:r')
+  vim.api.nvim_buf_set_lines(0, 0, 1, false, {
+    string.format(vim.bo.commentstring, 'http://localhost:5173/problem/' .. name),
+  })
+end
+
 return M
