@@ -72,7 +72,6 @@ end
 ---@return string
 function M.get_problem_url(filepath)
   local line = vim.fn.readfile(filepath, '', 1)[1]
-  -- local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
   local url = line:match('https?://[%w-_%.%?%.:/%+=&]+')
   return url or ''
 end
