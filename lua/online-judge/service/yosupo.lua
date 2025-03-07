@@ -12,10 +12,18 @@ function M.download_tests_cmd(url, test_dirname)
   }
 end
 
+local function filetype2langid(filetype)
+  local data = {
+    cpp = 'cpp',
+    python = 'pypy3',
+  }
+  return data[filetype]
+end
+
 ---@param url string
 ---@param file_path string
----@param lang_id string
-function M.submit(url, file_path, lang_id)
+---@param filetype string
+function M.submit(url, file_path, filetype)
   utils.notify('Submitting to yosupo judge...', vim.log.levels.INFO)
 
   async.void(function()
@@ -24,7 +32,7 @@ function M.submit(url, file_path, lang_id)
       'submit',
       url,
       file_path,
-      lang_id,
+      filetype2langid(filetype),
     })
 
     if out.code ~= 0 then

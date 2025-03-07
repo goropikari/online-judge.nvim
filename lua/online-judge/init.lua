@@ -188,9 +188,7 @@ local function test()
 end
 
 ---@class SubmitInfo
----@field atcoder_lang_id integer
----@field aoj_lang_id string
----@field yosupo_lang_id string
+---@field filetype string
 ---@field file_path string
 ---@field url string
 
@@ -209,15 +207,9 @@ local function prepare_submit_info()
   end
 
   local filetype = utils.get_filetype(file_path)
-  local lang_opt = lang.get_option(filetype)
-  local atcoder_lang_id = lang_opt.atcoder_lang_id
-  local aoj_lang_id = lang_opt.aoj_lang_id
-  local yosupo_lang_id = lang_opt.yosupo_lang_id
 
   return {
-    aoj_lang_id = aoj_lang_id,
-    atcoder_lang_id = atcoder_lang_id,
-    yosupo_lang_id = yosupo_lang_id,
+    filetype = filetype,
     file_path = file_path,
     url = url,
   }
@@ -229,9 +221,6 @@ M._prepare_submit_info = prepare_submit_info
 local function _submit(opts)
   local url = opts.url
   local file_path = opts.file_path
-  local lang_id = opts.atcoder_lang_id
-  local aoj_lang_id = opts.aoj_lang_id
-  local yosupo_lang_id = opts.yosupo_lang_id
 
   if os.getenv('ONLINE_JUDGE_FORCE_SUBMISSION') ~= '1' then
     local confirm = vim.fn.input('submit [y/N]: ')
@@ -241,17 +230,8 @@ local function _submit(opts)
     end
   end
 
-  if url:match('https://atcoder.jp') then
-    atcoder.submit(url, file_path, lang_id)
-  elseif url:match('https://onlinejudge.u%-aizu.ac.jp') then
-    aoj.submit(url, file_path, aoj_lang_id)
-  elseif url:match('https://judge.yosupo.jp') then
-    yosupo.submit(url, file_path, yosupo_lang_id)
-  elseif url:match('http://.*:5173') then -- local yosupo judge
-    yosupo.submit(url, file_path, yosupo_lang_id)
-  else
-    utils.notify('Unsupported url: ' .. (url or 'nil'), vim.log.levels.ERROR)
-  end
+  local svc = require('online-judge.service.common').create_service(url)
+  svc.submit(url, file_path, opts.filetype)
 end
 
 M._submit = _submit

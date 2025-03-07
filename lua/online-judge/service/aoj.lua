@@ -17,6 +17,8 @@ local function user_id()
   return state.user_id
 end
 
+---@param path string
+---@return string
 local function api_path(path)
   return vim.fs.joinpath('https://judgeapi.u-aizu.ac.jp', path)
 end
@@ -68,6 +70,9 @@ function M.logout()
   end)
 end
 
+---@param url string
+---@param test_dirname string
+---@return string[]
 function M.download_tests_cmd(url, test_dirname)
   return {
     cfg.oj(),
@@ -78,12 +83,25 @@ function M.download_tests_cmd(url, test_dirname)
   }
 end
 
-function M.submit(url, file_path, lang_id)
+---@param filetype string
+---@return string
+local function filetype2langid(filetype)
+  local data = {
+    cpp = 'C++23',
+    python = 'PyPy3',
+  }
+  return data[filetype]
+end
+
+---@param url string
+---@param file_path string
+---@param filetype string
+function M.submit(url, file_path, filetype)
   utils.notify('Submitting to AOJ...', vim.log.levels.INFO)
   local problem_id = vim.fn.fnamemodify(url, ':t')
   local req = {
     problemId = problem_id,
-    language = lang_id,
+    language = filetype2langid(filetype),
     sourceCode = vim.fn.join(vim.fn.readfile(file_path), '\n'),
   }
 

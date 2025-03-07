@@ -6,9 +6,6 @@ local utils = require('online-judge.utils')
 ---@field build fun(cfg:BuildConfig, callback:function)?
 ---@field command fun(cfg:BuildConfig): string
 ---@field dap_config fun(cfg:DebugConfig): DapConfig
----@field atcoder_lang_id integer
----@field aoj_lang_id string
----@field yosupo_lang_id string
 
 ---@class BuildConfig
 ---@field file_path string
@@ -89,9 +86,6 @@ local lang = {
         expressions = 'native',
       })
     end,
-    atcoder_lang_id = 5028, -- C++ 23
-    aoj_lang_id = 'C++23',
-    yosupo_lang_id = 'cpp',
   },
   python = {
     build = nil, -- use default fn
@@ -112,9 +106,6 @@ local lang = {
         --     sys.stdin = open(sys.argv[1])
       }
     end,
-    atcoder_lang_id = 5078, -- pypy3
-    aoj_lang_id = 'PyPy3',
-    yosupo_lang_id = 'pypy3',
   },
 }
 
@@ -133,9 +124,6 @@ function M.get_option(filetype)
     build = cfg.build,
     command = cfg.command,
     dap_config = cfg.dap_config,
-    atcoder_lang_id = cfg.atcoder_lang_id,
-    aoj_lang_id = cfg.aoj_lang_id,
-    yosupo_lang_id = cfg.yosupo_lang_id,
   }
 end
 
