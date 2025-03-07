@@ -68,6 +68,16 @@ function M.logout()
   end)
 end
 
+function M.download_tests_cmd(url, test_dirname)
+  return {
+    cfg.oj(),
+    'download',
+    url,
+    '--directory',
+    test_dirname,
+  }
+end
+
 function M.submit(url, file_path, lang_id)
   utils.notify('Submitting to AOJ...', vim.log.levels.INFO)
   local problem_id = vim.fn.fnamemodify(url, ':t')

@@ -3,6 +3,15 @@ local M = {}
 local async = require('plenary.async')
 local utils = require('online-judge.utils')
 
+function M.download_tests_cmd(url, test_dirname)
+  return {
+    'yosupocl',
+    'download-test',
+    url,
+    test_dirname,
+  }
+end
+
 ---@param url string
 ---@param file_path string
 ---@param lang_id string
@@ -30,7 +39,7 @@ end
 
 function M.insert_problem_url()
   local name = vim.fn.expand('%:p:t:r')
-  vim.api.nvim_buf_set_lines(0, 0, 1, false, {
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, {
     string.format(vim.bo.commentstring, 'http://localhost:5173/problem/' .. name),
   })
 end

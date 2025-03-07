@@ -27,6 +27,16 @@ function M.login()
   end)()
 end
 
+function M.download_tests_cmd(url, test_dirname)
+  return {
+    oj(),
+    'download',
+    url,
+    '--directory',
+    test_dirname,
+  }
+end
+
 function M.submit(url, file_path, lang_id)
   async.void(function()
     utils.notify('submit: ' .. url)

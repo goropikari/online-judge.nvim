@@ -126,7 +126,7 @@ function M.get_option(filetype)
   local cfg = lang[filetype]
   cfg.build = cfg.build or function(config, callback)
     if type(callback) == 'function' then
-      callback(config)
+      callback({ code = 0 })
     end
   end
   return {

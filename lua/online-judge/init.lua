@@ -47,23 +47,8 @@ local function _download_tests(url, test_dirname, callback)
     return
   end
 
-  local cmd
-  if utils.has_prefix(url, 'https://judge.yosupo.jp') or utils.has_prefix(url, 'http://localhost:5173') then
-    cmd = {
-      'yosupocl',
-      'download-test',
-      url,
-      test_dirname,
-    }
-  else
-    cmd = {
-      config.oj(),
-      'download',
-      url,
-      '--directory',
-      test_dirname,
-    }
-  end
+  local svc = require('online-judge.service.common').create_service(url)
+  local cmd = svc.download_tests_cmd(url, test_dirname)
   async.void(function()
     local out = utils.async_system(cmd)
     callback(out)
@@ -159,6 +144,7 @@ local function build_download_test(file_path, callback)
               :totable(),
           })
         end, 200)
+        vim.print(out)
         utils.notify('failed to build', vim.log.levels.ERROR)
         utils.notify(out.stderr, vim.log.levels.ERROR)
       end)
@@ -261,7 +247,7 @@ local function _submit(opts)
     aoj.submit(url, file_path, aoj_lang_id)
   elseif url:match('https://judge.yosupo.jp') then
     yosupo.submit(url, file_path, yosupo_lang_id)
-  elseif url:match('http://.*:5173') then
+  elseif url:match('http://.*:5173') then -- local yosupo judge
     yosupo.submit(url, file_path, yosupo_lang_id)
   else
     utils.notify('Unsupported url: ' .. (url or 'nil'), vim.log.levels.ERROR)
