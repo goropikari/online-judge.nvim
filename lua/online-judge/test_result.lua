@@ -175,7 +175,9 @@ function M.new()
     self.spin:start()
   end
   function obj.stop_spinner(self)
-    self.spin:stop()
+    vim.schedule(function()
+      self.spin:stop()
+    end)
   end
 
   ---@return string

@@ -144,7 +144,6 @@ local function build_download_test(file_path, callback)
               :totable(),
           })
         end, 200)
-        vim.print(out)
         utils.notify('failed to build', vim.log.levels.ERROR)
         utils.notify(out.stderr, vim.log.levels.ERROR)
       end)
@@ -157,8 +156,9 @@ local function build_download_test(file_path, callback)
 
         local download_res = download_tests_async(url, test_dir_path)
         if download_res.code ~= 0 then
-          state.test_result_viewer:stop_spinner()
           utils.notify('failed to download tests', vim.log.levels.ERROR)
+          utils.notify(download_res.stdout, vim.log.levels.ERROR)
+          state.test_result_viewer:stop_spinner()
           return
         end
 
