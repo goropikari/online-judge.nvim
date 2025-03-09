@@ -7,6 +7,8 @@ local M = {}
 local buf_filetype = 'online_judge'
 M.buf_filetype = buf_filetype
 
+local test_case_name_pattern = '%a[%w%-_]*%d+'
+
 ---@class TestResultViewer
 ---@field open fun(TestResultViewer)
 ---@field close fun(TestResultViewer)
@@ -102,18 +104,15 @@ function M.new()
     self.test_dir_path = test_result.test_dir_path
     local lines = test_result.result
     for i, line in ipairs(lines) do
+      line = line:gsub('^%[%w+%]%s(' .. test_case_name_pattern .. ')', '▷ %1')
       line = line:gsub('^%[%w+%]%s', '')
-      line = line:gsub('^sample%-', '▷ sample%-')
-      line = line:gsub('^custom%-', '▷ custom%-')
-      line = line:gsub('^random%-', '▷ random%-')
-      line = line:gsub('^example_', '▷ example_')
       lines[i] = line
     end
 
     local cnt = 1
     local prev_file = ''
     for _, v in ipairs(lines) do
-      local match_str = string.match(v, 'sample%-%d+$') or string.match(v, 'custom%-%d+$') or string.match(v, 'random%-%d+$') or string.match(v, 'example_%d+$')
+      local match_str = string.match(v, test_case_name_pattern .. '$')
       if match_str then
         self.test_case_display_length[prev_file] = cnt
         prev_file = match_str
@@ -182,8 +181,8 @@ function M.new()
   ---@return string
   ---@diagnostic disable-next-line
   function obj._test_file_prefix(self)
-    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w+[%-_]%d+') or ''
-    test_case = string.match(test_case, '%w+[%-_]%d+') or ''
+    local test_case = string.match(vim.api.nvim_get_current_line(), '[▷▽] %w[%w%-_]*%d+') or ''
+    test_case = string.match(test_case, '%w[%w%-_]*%d+') or ''
     return test_case
   end
 
