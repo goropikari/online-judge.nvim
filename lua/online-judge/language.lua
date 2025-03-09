@@ -77,7 +77,7 @@ local lang = {
         request = 'launch',
         program = executable,
         cwd = vim.fn.fnamemodify(cfg.file_path, ':h'),
-        build = { 'g++', '-ggdb3', cfg.file_path, '-o', executable },
+        build = { 'g++', '--std=c++23', '-ggdb3', cfg.file_path, '-o', executable },
       }
 
       return vim.tbl_deep_extend('force', base_config, {
