@@ -44,7 +44,7 @@ local lang = {
         vim.fn.mkdir(outdir, 'p')
         vim.system({
           'g++',
-          '-std=gnu++23',
+          '-std=c++23',
           '-O2',
           '-o',
           exec_path,
@@ -105,6 +105,15 @@ local lang = {
         -- if len(sys.argv) == 2:
         --     sys.stdin = open(sys.argv[1])
       }
+    end,
+  },
+  julia = {
+    build = nil, -- use default fn
+    command = function(cfg)
+      return 'julia ' .. cfg.file_path
+    end,
+    dap_config = function(cfg)
+      return {}
     end,
   },
 }

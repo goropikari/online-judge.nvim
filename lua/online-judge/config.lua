@@ -6,18 +6,6 @@ local function cache_to(path)
   return vim.fs.joinpath(cache_dir, path)
 end
 
----@param app string
----@return string
-local function mason_path(app)
-  local ok, registry = pcall(require, 'mason-registry')
-
-  if ok and registry.is_installed(app) then
-    local pkg = registry.get_package(app)
-    return pkg:get_install_path()
-  end
-  return ''
-end
-
 ---@class PluginConfig
 ---@field oj {path:string,tle:number,mle:integer}
 ---@field codelldb_path string
@@ -33,7 +21,7 @@ local default_config = {
     tle = 5, -- sec
     mle = 1024, -- mega byte
   },
-  codelldb_path = mason_path('codelldb'),
+  codelldb_path = vim.fn.exepath('codelldb'),
   out_dirpath = '/tmp/online-judge.nvim/',
   define_cmds = true,
   lang = {},
@@ -80,7 +68,7 @@ end
 
 ---@return string
 function M.codelldb()
-  return vim.fs.joinpath(config.codelldb_path, 'extension', 'adapter', 'codelldb')
+  return vim.fs.joinpath(config.codelldb_path)
 end
 
 M.cache_to = cache_to
