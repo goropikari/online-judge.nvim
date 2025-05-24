@@ -7,7 +7,7 @@ local function cache_to(path)
 end
 
 ---@class PluginConfig
----@field oj {path:string,tle:number,mle:integer}
+---@field oj {path:string, tle:number, mle:integer, exact_match:boolean, precision:string}
 ---@field codelldb_path string
 ---@field cache_dir string
 ---@field out_dirpath string
@@ -20,6 +20,8 @@ local default_config = {
     path = 'oj',
     tle = 5, -- sec
     mle = 1024, -- mega byte
+    exact_match = true,
+    precision = '1e-6',
   },
   codelldb_path = vim.fn.exepath('codelldb'),
   out_dirpath = '/tmp/online-judge.nvim/',
@@ -64,6 +66,30 @@ end
 ---@param mle_mb integer
 function M.set_mle(mle_mb)
   config.oj.mle = mle_mb
+end
+
+function M.exact_match()
+  return config.oj.exact_match
+end
+
+function M.enable_exact_match()
+  config.oj.exact_match = true
+end
+
+function M.disable_exact_match()
+  config.oj.exact_match = false
+end
+
+function M.precision()
+  return config.oj.precision
+end
+
+function M.set_precision(precision)
+  config.oj.precision = precision
+end
+
+function M.reset_precision()
+  config.oj.precision = default_config.oj.precision
 end
 
 ---@return string

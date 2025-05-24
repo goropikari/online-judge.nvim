@@ -1,6 +1,7 @@
 local lang = require('online-judge.language')
 local spinner = require('online-judge.spinner')
 local utils = require('online-judge.utils')
+local config = require('online-judge.config')
 
 local M = {}
 
@@ -130,6 +131,7 @@ function M.new()
       'test_dir: ' .. test_result.test_dir_path,
       'file_path: ' .. test_result.file_path,
       'command: ' .. test_result.command,
+      'exact_match: ' .. tostring(config.exact_match()) .. ', ' .. config.precision(),
       '',
       'help',
       '  r:    rerun test cases',

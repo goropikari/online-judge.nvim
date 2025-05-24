@@ -36,7 +36,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
     opts = {
         ---@class PluginConfig
-        ---@field oj {path:string, tle:number, mle:integer}
+        ---@field oj {path:string, tle:number, mle:integer, exact_match:boolean, precision:string}
         ---@field codelldb_path string
         ---@field define_cmds boolean
         ---@field lang {string:LanguageOption}
@@ -71,6 +71,9 @@ The plugin provides the following commands:
 | `:OnlineJudge download_tests` | Download test cases.                       |
 | `:OnlineJudge atcoder_login`  | Log in to AtCoder. Required for submission |
 | `:OnlineJudge aoj_login`      | Log in to AOJ. Required for submission     |
+| `:OnlineJudge enable_exact_match` | Enable exact match for test cases.         |
+| `:OnlineJudge disable_exact_match` | Disable exact match for test cases.        |
+| `:OnlineJudge set_precision <precision>` | Set precision for floating-point comparisons. |
 
 | API                                                 | Description                                                                                                                                                                       |
 | -----------------------------                       | ------------------------------------                                                                                                                                              |
@@ -125,8 +128,10 @@ You can extend or customize supported languages in the `setup()` function:
             path = 'oj',
             tle = 5, -- sec
             mle = 1024, -- mega byte
+            exact_match = true,
+            precision = '1e-6', -- for floating-point comparisons
         },
-        codelldb_path = vim.fn.exepath('/codelldb'),
+        codelldb_path = vim.fn.exepath('codelldb'),
 
         ---@class LanguageOption
         ---@field build fun(cfg:BuildConfig, callback:fun(cfg:BuildConfig))

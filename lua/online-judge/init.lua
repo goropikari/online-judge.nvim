@@ -80,15 +80,20 @@ local function execute_test(test_dirname, command, callback)
     local cmd = {
       config.oj(),
       'test',
-      '--error',
-      '1e-6',
+    }
+
+    if not config.exact_match() then
+      vim.list_extend(cmd, { '--error', config.precision() })
+    end
+    vim.list_extend(cmd, {
       '--tle',
       config.tle(),
       '--directory',
       test_dirname,
       '-c',
       command,
-    }
+    })
+
     if vim.fn.executable('time') == 1 then -- `sudo apt-get install time`
       vim.list_extend(cmd, { '--mle', config.mle() })
     end
@@ -277,10 +282,26 @@ local function setup_cmds()
     download_tests = function()
       download_tests(nopfn)
     end,
+    enable_exact_match = function()
+      config.enable_exact_match()
+      utils.notify('exact match enabled')
+    end,
+    disable_exact_match = function()
+      config.disable_exact_match()
+      utils.notify('exact match disabled')
+    end,
+    set_precision = function(opts)
+      if opts.fargs[1] == 'set_precision' and opts.fargs[2] then
+        config.set_precision(opts.fargs[2])
+        print('Precision set to ' .. opts.fargs[2])
+      else
+        print('Usage: OnlineJudge set_precision <value>')
+      end
+    end,
   }
 
   vim.api.nvim_create_user_command('OnlineJudge', function(opts)
-    fns[opts.args]()
+    fns[opts.fargs[1]](opts)
   end, {
     ---@diagnostic disable-next-line
     complete = function(arg_lead, cmd_line, cursor_pos)
@@ -291,9 +312,12 @@ local function setup_cmds()
         'submit',
         'submit_with_test',
         'download_tests',
+        'enable_exact_match',
+        'disable_exact_match',
+        'set_precision',
       }
     end,
-    nargs = 1,
+    nargs = '+',
   })
 end
 
