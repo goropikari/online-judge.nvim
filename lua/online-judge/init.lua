@@ -86,6 +86,7 @@ local function execute_test(test_dirname, command, callback)
       vim.list_extend(cmd, { '--error', config.precision() })
     end
     vim.list_extend(cmd, {
+      '--ignore-spaces-and-newlines',
       '--tle',
       config.tle(),
       '--directory',

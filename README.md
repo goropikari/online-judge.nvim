@@ -51,7 +51,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip3 install git+https://github.com/online-judge-tools/oj@v12.0.0
+pip3 install git+https://github.com/goropikari/oj
 ```
 
 - **`time` command** (Optional for memory limit checks):
