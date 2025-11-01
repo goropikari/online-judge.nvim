@@ -41,9 +41,9 @@ end
 ---@return string
 local function filetype2langid(filetype)
   local data = {
-    cpp = '5028', -- C++23
-    python = '5078', -- pypy3
-    julia = '5022', -- julia 1.9.2
+    cpp = '6017', -- C++23
+    python = '6083', -- pypy3
+    julia = '6114', -- julia 1.9.2
   }
   return data[filetype]
 end
