@@ -78,6 +78,7 @@ The plugin provides the following commands:
 | Command                       | Description                                |
 | ----------------------------- | ------------------------------------       |
 | `:OnlineJudge test`           | Run sample test cases.                     |
+| `:OnlineJudge test_case <name>` | Run only the specified test case.       |
 | `:OnlineJudge submit`         | Submit the code.                           |
 | `:OnlineJudge submit_with_test` | Run tests, then submit.                 |
 | `:OnlineJudge download_tests` | Download test cases.                       |
@@ -91,6 +92,7 @@ The plugin provides the following commands:
 | API                                                 | Description                                                                                                                                                                       |
 | -----------------------------                       | ------------------------------------                                                                                                                                              |
 | `:lua require('online-judge').test()`               | Run sample test cases.                                                                                                                                                            |
+| `:lua require('online-judge').test_case('sample-1')` | Run only the specified test case.                                                                                                                                               |
 | `:lua require('online-judge').submit()`             | Submit the code.                                                                                                                                                                  |
 | `:lua require('online-judge').submit_with_test()`   | Run tests, then submit.                                                                                                                                                           |
 | `:lua require('online-judge').download_tests()`     | Download test cases.                                                                                                                                                              |
@@ -126,6 +128,12 @@ Run:
 
 ```vim
 :OnlineJudge test
+```
+
+To rerun only one case:
+
+```vim
+:OnlineJudge test_case sample-1
 ```
 
 ### Submit Code

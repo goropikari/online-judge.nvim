@@ -101,6 +101,17 @@ local function test()
   test_flow.run(context, state.test_result_viewer, nopfn)
 end
 
+---@param case_name string|nil
+local function test_case(case_name)
+  local context = source_context.current(state.test_result_viewer)
+  case_name = case_name or state.test_result_viewer:get_state().selected_case
+  if not case_name or case_name == '' then
+    utils.notify('no test case selected', vim.log.levels.WARN)
+    return
+  end
+  test_flow.run_case(context, case_name, state.test_result_viewer, nopfn)
+end
+
 ---@return SourceContext|nil
 local function current_submit_context()
   local context = source_context.current(state.test_result_viewer)
@@ -145,6 +156,9 @@ local function setup_cmds()
     aoj_login = aoj.login,
     atcoder_login = atcoder.login,
     test = test,
+    test_case = function(opts)
+      test_case(opts.fargs[2])
+    end,
     submit = submit,
     submit_with_test = submit_with_test,
     download_tests = function()
@@ -194,6 +208,7 @@ local function setup_cmds()
         'aoj_login',
         'atcoder_login',
         'test',
+        'test_case',
         'submit',
         'submit_with_test',
         'download_tests',
@@ -220,6 +235,7 @@ function M.setup(opts)
 
   state.test_result_viewer = result_viewer.new(config.viewer())
   state.test_result_viewer:register_rerun_fn(test)
+  state.test_result_viewer:register_rerun_case_fn(test_case)
   state.test_result_viewer:register_submit_fn(submit)
   state.test_result_viewer:register_debug_fn(debug_case)
   if cfg.define_cmds then
@@ -239,6 +255,7 @@ M.settings = {
 M.download_tests = download_tests
 M.refresh_samples = refresh_samples
 M.test = test
+M.test_case = test_case
 M.submit = submit
 M.debug_case = debug_case
 M.atcoder_login = atcoder.login

@@ -82,6 +82,7 @@ function M.new(opts)
     store = store,
     line_map = {},
     rerun_fn = nil,
+    rerun_case_fn = nil,
     submit_fn = nil,
     debug_fn = nil,
   }
@@ -170,6 +171,11 @@ function M.new(opts)
         obj.rerun_fn()
       end
     end,
+    rerun_case = function()
+      if obj.rerun_case_fn then
+        obj.rerun_case_fn(current_case_name())
+      end
+    end,
     submit = function()
       if obj.submit_fn then
         obj.submit_fn()
@@ -232,6 +238,10 @@ function M.new(opts)
 
   function obj:register_rerun_fn(fn)
     self.rerun_fn = fn
+  end
+
+  function obj:register_rerun_case_fn(fn)
+    self.rerun_case_fn = fn
   end
 
   function obj:register_submit_fn(fn)

@@ -4,6 +4,7 @@ local M = {}
 
 local default_keymaps = {
   rerun = 'r',
+  rerun_case = 'R',
   submit = 's',
   preview = '<CR>',
   add_case = 'a',
@@ -89,6 +90,12 @@ function M.attach(bufnr, keymap, actions)
 
   bind('rerun', function()
     actions.rerun()
+  end)
+
+  bind('rerun_case', function()
+    if actions.rerun_case then
+      actions.rerun_case()
+    end
   end)
 
   bind('submit', function()

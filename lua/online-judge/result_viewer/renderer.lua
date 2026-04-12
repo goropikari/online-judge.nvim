@@ -23,6 +23,7 @@ function M.render(state)
     '',
     'help {{{',
     string.format('  %s: rerun test cases', keymaps.rerun or 'r'),
+    string.format('  %s: rerun selected test case', keymaps.rerun_case or 'R'),
     string.format('  %s: submit current file', keymaps.submit or 's'),
     string.format('  %s: view/hide test case', keymaps.preview or '<CR>'),
     string.format('  %s: add test case', keymaps.add_case or 'a'),

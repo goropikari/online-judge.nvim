@@ -6,6 +6,7 @@ local notifier = require('online-judge.utils')
 local parser = require('online-judge.test_parser')
 local sample_manager = require('online-judge.sample_manager')
 local service_registry = require('online-judge.service_registry')
+local test_case_service = require('online-judge.test_case_service')
 
 local M = {}
 
@@ -33,6 +34,48 @@ local function system(cmd)
   return notifier.async_system(cmd)
 end
 
+local function test_command(command, test_dir_path)
+  local cmd = {
+    config.oj(),
+    'test',
+  }
+  if not config.exact_match() then
+    vim.list_extend(cmd, { '--error', config.precision() })
+  end
+  vim.list_extend(cmd, {
+    '--ignore-spaces-and-newlines',
+    '--tle',
+    config.tle(),
+    '--directory',
+    test_dir_path,
+    '-c',
+    command,
+  })
+  if vim.fn.executable('time') == 1 then
+    vim.list_extend(cmd, { '--mle', config.mle() })
+  end
+  return cmd
+end
+
+local function prepare_single_case_dir(context, case_name)
+  local paths = test_case_service.case_paths(context.test_dir_path, case_name)
+  if vim.fn.filereadable(paths.input) == 0 or vim.fn.filereadable(paths.output) == 0 then
+    return nil, 'test case files are missing'
+  end
+
+  local safe_name = case_name:gsub('[^%w%-_]', '_')
+  local dir_path = config.cache_to(vim.fs.joinpath('single_case', safe_name))
+  vim.fn.mkdir(dir_path, 'p')
+  for _, path in ipairs(vim.fn.glob(vim.fs.joinpath(dir_path, '*'), false, true)) do
+    vim.fn.delete(path)
+  end
+
+  local target = test_case_service.case_paths(dir_path, case_name)
+  vim.fn.writefile(vim.fn.readfile(paths.input), target.input)
+  vim.fn.writefile(vim.fn.readfile(paths.output), target.output)
+  return dir_path
+end
+
 ---@param context SourceContext
 ---@return vim.SystemCompleted
 local function download_samples(context)
@@ -56,7 +99,8 @@ end
 ---@param context SourceContext
 ---@param viewer table
 ---@param callback fun(opts:table)|nil
-function M.run(context, viewer, callback)
+---@param case_name string|nil
+local function run_impl(context, viewer, callback, case_name)
   callback = callback or function() end
   viewer = viewer or noop_viewer()
 
@@ -122,30 +166,29 @@ function M.run(context, viewer, callback)
         end
       end
 
+      local run_test_dir = context.test_dir_path
+      if case_name ~= nil and case_name ~= '' then
+        local single_case_dir, err = prepare_single_case_dir(context, case_name)
+        if not single_case_dir then
+          notifier.notify(err, vim.log.levels.ERROR)
+          schedule_ui(function()
+            viewer:update({
+              file_path = context.file_path,
+              command = command,
+              test_dir_path = context.test_dir_path,
+              error_lines = { err },
+            })
+          end)
+          return
+        end
+        run_test_dir = single_case_dir
+      end
+
       schedule_ui(function()
         viewer:start_phase('testing')
       end)
-      local cmd = {
-        config.oj(),
-        'test',
-      }
-      if not config.exact_match() then
-        vim.list_extend(cmd, { '--error', config.precision() })
-      end
-      vim.list_extend(cmd, {
-        '--ignore-spaces-and-newlines',
-        '--tle',
-        config.tle(),
-        '--directory',
-        context.test_dir_path,
-        '-c',
-        command,
-      })
-      if vim.fn.executable('time') == 1 then
-        vim.list_extend(cmd, { '--mle', config.mle() })
-      end
 
-      local test_res = system(cmd)
+      local test_res = system(test_command(command, run_test_dir))
       local parsed = parser.parse(test_res.stdout)
       vim.schedule(function()
         viewer:update({
@@ -162,6 +205,21 @@ function M.run(context, viewer, callback)
       end)
     end)()
   end)
+end
+
+---@param context SourceContext
+---@param viewer table
+---@param callback fun(opts:table)|nil
+function M.run(context, viewer, callback)
+  run_impl(context, viewer, callback, nil)
+end
+
+---@param context SourceContext
+---@param case_name string
+---@param viewer table
+---@param callback fun(opts:table)|nil
+function M.run_case(context, case_name, viewer, callback)
+  run_impl(context, viewer, callback, case_name)
 end
 
 M.download_samples = download_samples

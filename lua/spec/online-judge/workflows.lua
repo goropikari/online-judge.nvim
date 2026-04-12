@@ -10,6 +10,7 @@ describe('public workflows', function()
     oj = require('online-judge')
     viewer = {
       register_rerun_fn = function() end,
+      register_rerun_case_fn = function() end,
       register_submit_fn = function() end,
       register_debug_fn = function() end,
       get_state = function()
@@ -132,6 +133,35 @@ describe('public workflows', function()
     mock.revert(source_context)
     mock.revert(test_flow)
     mock.revert(submission_flow)
+    mock.revert(result_viewer)
+    mock.revert(config)
+    mock.revert(lang)
+    mock.revert(debug)
+  end)
+
+  it('runs the selected test case from the current source context', function()
+    local result_viewer, config, lang, debug = setup_plugin()
+    local source_context = mock(require('online-judge.source_context'), true)
+    local test_flow = mock(require('online-judge.test_flow'), true)
+
+    source_context.current.returns({
+      filetype = 'cpp',
+      file_path = '/path/to/a.cpp',
+      url = 'https://atcoder.jp/contests/abc380/tasks/abc380_a',
+      test_dir_path = '/path/to/test_a',
+    })
+
+    oj.test_case('sample-2')
+
+    assert.stub(test_flow.run_case).was_called_with({
+      filetype = 'cpp',
+      file_path = '/path/to/a.cpp',
+      url = 'https://atcoder.jp/contests/abc380/tasks/abc380_a',
+      test_dir_path = '/path/to/test_a',
+    }, 'sample-2', viewer, match.is_function())
+
+    mock.revert(source_context)
+    mock.revert(test_flow)
     mock.revert(result_viewer)
     mock.revert(config)
     mock.revert(lang)

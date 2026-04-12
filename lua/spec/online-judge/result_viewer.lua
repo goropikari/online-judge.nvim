@@ -42,6 +42,7 @@ describe('result viewer config', function()
       auto_open = false,
       keymaps = {
         rerun = { keys = { 'R', '<F5>' }, desc = 'rerun tests' },
+        rerun_case = 'gr',
         debug_case = false,
       },
     })
@@ -62,6 +63,7 @@ describe('result viewer config', function()
 
     assert.is_true(vim.tbl_contains(lines, 'help {{{'))
     assert.is_true(vim.tbl_contains(lines, '  R, <F5>: rerun test cases'))
+    assert.is_true(vim.tbl_contains(lines, '  gr: rerun selected test case'))
     assert.is_true(vim.tbl_contains(lines, '  : debug selected case'))
     assert.is_true(vim.tbl_contains(lines, '}}}'))
 
