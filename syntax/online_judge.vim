@@ -12,7 +12,7 @@ syntax match OnlineJudgeFailure /^TLE$/
 syntax match OnlineJudgeFailure /^test failed/
 
 highlight OnlineJudgeTestFile guifg=#33FFFF gui=bold
-syntax match OnlineJudgeTestFile /\a[[:alnum:]_\-]\+\d\+$/
+syntax match OnlineJudgeTestFile /^[▷▽] \zs\a[[:alnum:]_\-]\+\d\+\ze\%(  <\)\?$/
 
 highlight OnlineJudgeIO guifg=#FFFF00 gui=bold
 syntax keyword OnlineJudgeIO input output expected

@@ -1,4 +1,6 @@
+.codex
 venv
 example/a
 *.in
 *.out
+nvim.log

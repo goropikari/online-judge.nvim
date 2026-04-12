@@ -16,6 +16,7 @@ This plugin has only been tested with past problems. It has not been used or ver
 # Requirements
 
 - Neovim 0.10+
+- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 - [online-judge-tools](https://github.com/online-judge-tools/oj)
 - curl
 
@@ -42,6 +43,15 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
         ---@field lang {string:LanguageOption}
     },
 }
+```
+
+## Testing
+
+For local verification, keep `plenary.nvim` in `deps/plenary.nvim`.
+
+```bash
+git submodule update --init --recursive
+make test
 ```
 
 ## Prerequisites

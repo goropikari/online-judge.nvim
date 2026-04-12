@@ -9,6 +9,12 @@ lint:
 .PHONY: check
 check: lint fmt
 
+.PHONY: test
+test:
+	nvim --headless -u tests/minimal_init.lua \
+	-c "PlenaryBustedDirectory lua/spec/online-judge { minimal_init = 'tests/minimal_init.lua' }" \
+	-c qa
+
 .PHONY: up
 up:
 	devcontainer up --workspace-folder=.
