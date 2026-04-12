@@ -38,6 +38,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     opts = {
         ---@class PluginConfig
         ---@field oj {path:string, tle:number, mle:integer, exact_match:boolean, precision:string}
+        ---@field viewer {auto_open:boolean, position:string, width:number, height:number, preview_max_lines:integer, keymaps:table<string, any>}
         ---@field codelldb_path string
         ---@field define_cmds boolean
         ---@field lang {string:LanguageOption}
@@ -78,7 +79,9 @@ The plugin provides the following commands:
 | ----------------------------- | ------------------------------------       |
 | `:OnlineJudge test`           | Run sample test cases.                     |
 | `:OnlineJudge submit`         | Submit the code.                           |
+| `:OnlineJudge submit_with_test` | Run tests, then submit.                 |
 | `:OnlineJudge download_tests` | Download test cases.                       |
+| `:OnlineJudge refresh_samples` | Re-download only sample cases.            |
 | `:OnlineJudge atcoder_login`  | Log in to AtCoder. Required for submission |
 | `:OnlineJudge aoj_login`      | Log in to AOJ. Required for submission     |
 | `:OnlineJudge enable_exact_match` | Enable exact match for test cases.         |
@@ -89,10 +92,13 @@ The plugin provides the following commands:
 | -----------------------------                       | ------------------------------------                                                                                                                                              |
 | `:lua require('online-judge').test()`               | Run sample test cases.                                                                                                                                                            |
 | `:lua require('online-judge').submit()`             | Submit the code.                                                                                                                                                                  |
+| `:lua require('online-judge').submit_with_test()`   | Run tests, then submit.                                                                                                                                                           |
 | `:lua require('online-judge').download_tests()`     | Download test cases.                                                                                                                                                              |
+| `:lua require('online-judge').refresh_samples()`    | Re-download only sample cases and keep custom cases.                                                                                                                              |
 | `:lua require('online-judge').atcoder_login()`      | Log in to AtCoder. Required for submission                                                                                                                                        |
 | `:lua require('online-judge').aoj_login()`          | Log in to AOJ. Required for submission                                                                                                                                            |
-| `:lua require('online-judge').insert_problem_url()` | Insert AtCoder problem url. The directory name is interpreted as the contest_id. The problem_id is created by concatenating the contest_id, an underscore (_), and the file name. |
+| `:lua require('online-judge').settings.set_precision('1e-9')` | Update runtime comparison precision. |
+| `:lua require('online-judge').settings.enable_exact_match()` | Enable runtime exact-match comparison. |
 
 ## Usage
 
@@ -104,6 +110,12 @@ Then run:
 
 ```vim
 :OnlineJudge download_tests
+```
+
+To re-download only sample cases while keeping existing `custom-*` cases:
+
+```vim
+:OnlineJudge refresh_samples
 ```
 
 ### Run Sample Tests
@@ -124,6 +136,12 @@ Run the following command to submit:
 :OnlineJudge submit
 ```
 
+To run tests first and submit after the test flow completes:
+
+```vim
+:OnlineJudge submit_with_test
+```
+
 ## Customization
 
 ### Language Support
@@ -140,6 +158,18 @@ You can extend or customize supported languages in the `setup()` function:
             mle = 1024, -- mega byte
             exact_match = true,
             precision = '1e-6', -- for floating-point comparisons
+        },
+        viewer = {
+            auto_open = true,
+            position = 'right', -- right | left | bottom | float
+            width = 0.4,
+            height = 0.3,
+            preview_max_lines = 20,
+            keymaps = {
+                rerun = 'r',
+                submit = { keys = { 's', '<leader>s' }, desc = 'submit current file' },
+                debug_case = false,
+            },
         },
         codelldb_path = vim.fn.exepath('codelldb'),
 
@@ -179,6 +209,18 @@ You can extend or customize supported languages in the `setup()` function:
         }
     },
 }
+```
+
+### Runtime Settings
+
+Comparison-related settings can also be adjusted at runtime:
+
+```lua
+local oj = require('online-judge')
+
+oj.settings.disable_exact_match()
+oj.settings.set_precision('1e-9')
+oj.settings.set_tle(10)
 ```
 
 ## Limitations

@@ -10,6 +10,7 @@ local submission_flow = require('online-judge.submission_flow')
 local test_flow = require('online-judge.test_flow')
 local utils = require('online-judge.utils')
 local io = require('online-judge.io')
+local sample_manager = require('online-judge.sample_manager')
 
 local debug = require('online-judge.debug')
 local async = require('plenary.async')
@@ -23,7 +24,9 @@ local function force_download_tests(url, test_dirname, callback)
   local cmd = svc.download_tests_cmd(url, test_dirname)
   async.void(function()
     local out = utils.async_system(cmd)
-    callback(out)
+    vim.schedule(function()
+      callback(out)
+    end)
   end)()
 end
 
@@ -68,76 +71,68 @@ local function download_tests(callback)
   _download_tests(context.url, context.test_dir_path, callback)
 end
 
+---@param callback fun(opts:vim.SystemCompleted)
+local function refresh_samples(callback)
+  local context = source_context.current(state.test_result_viewer)
+  callback = callback or nopfn
+
+  if context.url == '' then
+    utils.notify('url is not written', vim.log.levels.ERROR)
+    callback({
+      code = 1,
+      stdout = '',
+      stderr = 'url is not written',
+      signal = 0,
+    })
+    return
+  end
+
+  sample_manager.remove_sample_cases(context.test_dir_path)
+  force_download_tests(context.url, context.test_dir_path, function(out)
+    if out.code == 0 then
+      sample_manager.normalize_samples(context.test_dir_path)
+    end
+    callback(out)
+  end)
+end
+
 local function test()
   local context = source_context.current(state.test_result_viewer)
   test_flow.run(context, state.test_result_viewer, nopfn)
 end
 
----@class SubmitInfo
----@field filetype string
----@field file_path string
----@field url string
-
----@return SubmitInfo|nil
-local function prepare_submit_info()
+---@return SourceContext|nil
+local function current_submit_context()
   local context = source_context.current(state.test_result_viewer)
   if context.url == '' then
     utils.notify('problem url is required', vim.log.levels.ERROR)
     return nil
   end
 
-  return {
-    filetype = context.filetype,
-    file_path = context.file_path,
-    url = context.url,
-  }
+  return context
 end
-
-M._prepare_submit_info = prepare_submit_info
-
----@param opts SubmitInfo
-local function _submit(opts)
-  submission_flow.submit({
-    url = opts.url,
-    file_path = opts.file_path,
-    filetype = opts.filetype,
-    test_dir_path = utils.get_test_dirname(opts.file_path),
-  }, state.test_result_viewer)
-end
-
-M._submit = _submit
 
 local function submit()
-  local info = prepare_submit_info()
-  if info == nil then
+  local context = current_submit_context()
+  if context == nil then
     return
   end
-  _submit(info)
-end
-
----@param opts SubmitInfo
-local function _submit_with_test(opts)
-  local callback = function()
-    vim.defer_fn(function()
-      submission_flow.submit({
-        url = opts.url,
-        file_path = opts.file_path,
-        filetype = opts.filetype,
-        test_dir_path = utils.get_test_dirname(opts.file_path),
-      }, state.test_result_viewer, { update_viewer_on_error = true })
-    end, 200)
-  end
-
-  local context = source_context.current(state.test_result_viewer)
-  test_flow.run(context, state.test_result_viewer, callback)
+  submission_flow.submit(context, state.test_result_viewer)
 end
 
 local function submit_with_test()
-  local info = prepare_submit_info()
-  if info == nil then
+  local context = current_submit_context()
+  if context == nil then
     return
   end
-  _submit_with_test(info)
+
+  local callback = function()
+    vim.defer_fn(function()
+      submission_flow.submit(context, state.test_result_viewer, { update_viewer_on_error = true })
+    end, 200)
+  end
+
+  test_flow.run(context, state.test_result_viewer, callback)
 end
 
 local function debug_case()
@@ -159,6 +154,16 @@ local function setup_cmds()
         else
           utils.notify('failed to download tests', vim.log.levels.ERROR)
           utils.notify(out.stdout, vim.log.levels.ERROR)
+        end
+      end)
+    end,
+    refresh_samples = function()
+      refresh_samples(function(out)
+        if out.code == 0 then
+          utils.notify('samples refreshed successfully')
+        else
+          utils.notify('failed to refresh samples', vim.log.levels.ERROR)
+          utils.notify(out.stdout ~= '' and out.stdout or out.stderr, vim.log.levels.ERROR)
         end
       end)
     end,
@@ -192,6 +197,7 @@ local function setup_cmds()
         'submit',
         'submit_with_test',
         'download_tests',
+        'refresh_samples',
         'enable_exact_match',
         'disable_exact_match',
         'set_precision',
@@ -212,7 +218,7 @@ function M.setup(opts)
   vim.fn.mkdir(cfg.out_dirpath, 'p')
   vim.fn.mkdir(cfg.cache_dir, 'p')
 
-  state.test_result_viewer = result_viewer.new()
+  state.test_result_viewer = result_viewer.new(config.viewer())
   state.test_result_viewer:register_rerun_fn(test)
   state.test_result_viewer:register_submit_fn(submit)
   state.test_result_viewer:register_debug_fn(debug_case)
@@ -221,8 +227,17 @@ function M.setup(opts)
   end
 end
 
-M._download_tests = _download_tests
+M.settings = {
+  enable_exact_match = config.enable_exact_match,
+  disable_exact_match = config.disable_exact_match,
+  set_precision = config.set_precision,
+  reset_precision = config.reset_precision,
+  set_tle = config.set_tle,
+  set_mle = config.set_mle,
+}
+
 M.download_tests = download_tests
+M.refresh_samples = refresh_samples
 M.test = test
 M.submit = submit
 M.debug_case = debug_case

@@ -52,13 +52,17 @@ local lang = {
           file_path,
         }, { text = true }, function(out)
           if type(callback) == 'function' then
-            utils.notify(out.stderr, vim.log.levels.WARN)
-            callback(out)
+            vim.schedule(function()
+              utils.notify(out.stderr, vim.log.levels.WARN)
+              callback(out)
+            end)
           end
         end)
       else
         if type(callback) == 'function' then
-          callback({ code = 0 })
+          vim.schedule(function()
+            callback({ code = 0 })
+          end)
         end
       end
     end,
@@ -126,11 +130,14 @@ function M.get_option(filetype)
   filetype = filetype or vim.bo.filetype
 
   local cfg = lang[filetype]
-  cfg.build = cfg.build or function(config, callback)
-    if type(callback) == 'function' then
-      callback({ code = 0 })
+  cfg.build = cfg.build
+    or function(config, callback)
+      if type(callback) == 'function' then
+        vim.schedule(function()
+          callback({ code = 0 })
+        end)
+      end
     end
-  end
   return {
     build = cfg.build,
     command = cfg.command,

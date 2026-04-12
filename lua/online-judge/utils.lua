@@ -129,7 +129,11 @@ function M.notify(msg, levels, opts)
 end
 
 M.async_system = async.wrap(function(cmd, callback)
-  vim.system(cmd, { text = true }, callback)
+  vim.system(cmd, { text = true }, function(out)
+    vim.schedule(function()
+      callback(out)
+    end)
+  end)
 end, 2)
 
 return M

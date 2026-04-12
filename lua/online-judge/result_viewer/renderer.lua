@@ -21,15 +21,16 @@ function M.render(state)
     'command: ' .. (state.command or ''),
     'exact_match: ' .. tostring(config.exact_match()) .. ', ' .. config.precision(),
     '',
-    'help',
+    'help {{{',
     string.format('  %s: rerun test cases', keymaps.rerun or 'r'),
-    string.format('  %s: submit with test', keymaps.submit or 's'),
+    string.format('  %s: submit current file', keymaps.submit or 's'),
     string.format('  %s: view/hide test case', keymaps.preview or '<CR>'),
     string.format('  %s: add test case', keymaps.add_case or 'a'),
     string.format('  %s: edit test case', keymaps.edit_case or 'e'),
     string.format('  %s: copy test case', keymaps.copy_case or 'c'),
     string.format('  %s: delete test case', keymaps.delete_case or 'D'),
     string.format('  %s: debug selected case', keymaps.debug_case or 'd'),
+    '}}}',
     '',
   }
   local line_map = {}

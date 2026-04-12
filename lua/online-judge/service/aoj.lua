@@ -5,7 +5,11 @@ local cfg = require('online-judge.config')
 local utils = require('online-judge.utils')
 
 local system = function(cmd, cb)
-  return vim.system(cmd, { text = true }, cb)
+  return vim.system(cmd, { text = true }, function(out)
+    vim.schedule(function()
+      cb(out)
+    end)
+  end)
 end
 
 local session_file = cfg.cache_to('aoj_session.txt')

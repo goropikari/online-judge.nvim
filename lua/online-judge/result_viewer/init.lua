@@ -22,21 +22,57 @@ local default_state = {
   keymaps = {},
 }
 
-local function open_window(bufnr)
+local function open_window(bufnr, viewer_opts)
   local winid = utils.get_window_id(bufnr)
   if vim.api.nvim_win_is_valid(winid) then
+    vim.api.nvim_set_option_value('foldmethod', 'marker', { win = winid })
+    vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
     return winid
   end
 
-  return vim.api.nvim_open_win(bufnr, false, {
-    split = 'right',
-    width = math.floor(vim.o.columns * 0.4),
+  local position = viewer_opts.position or 'right'
+  if position == 'float' then
+    winid = vim.api.nvim_open_win(bufnr, false, {
+      relative = 'editor',
+      row = 1,
+      col = math.floor(vim.o.columns * (1 - viewer_opts.width)),
+      width = math.max(20, math.floor(vim.o.columns * viewer_opts.width)),
+      height = math.max(10, math.floor(vim.o.lines * viewer_opts.height)),
+      border = 'single',
+      style = 'minimal',
+    })
+    vim.api.nvim_set_option_value('foldmethod', 'marker', { win = winid })
+    vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
+    return winid
+  end
+
+  local split = ({ left = 'left', right = 'right', bottom = 'below' })[position] or 'right'
+  local open_opts = {
+    split = split,
     style = 'minimal',
-  })
+  }
+  if position == 'bottom' then
+    open_opts.height = math.max(10, math.floor(vim.o.lines * viewer_opts.height))
+  else
+    open_opts.width = math.max(20, math.floor(vim.o.columns * viewer_opts.width))
+  end
+
+  winid = vim.api.nvim_open_win(bufnr, false, open_opts)
+  vim.api.nvim_set_option_value('foldmethod', 'marker', { win = winid })
+  vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
+  return winid
 end
 
 function M.new(opts)
   opts = opts or {}
+  local viewer_opts = {
+    auto_open = opts.auto_open ~= false,
+    position = opts.position or 'right',
+    width = opts.width or 0.4,
+    height = opts.height or 0.3,
+    preview_max_lines = opts.preview_max_lines or 20,
+    keymaps = opts.keymaps or {},
+  }
   local bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value('filetype', filetype.buf_filetype, { buf = bufnr })
 
@@ -90,7 +126,7 @@ function M.new(opts)
     vim.api.nvim_set_option_value('modifiable', false, { buf = bufnr })
     local winid = nil
     if opts.auto_open ~= false then
-      winid = open_window(bufnr)
+      winid = open_window(bufnr, viewer_opts)
     else
       winid = utils.get_window_id(bufnr)
     end
@@ -122,10 +158,13 @@ function M.new(opts)
   end
 
   store:subscribe(function(state)
-    request_redraw(state, { cursor_row = current_row() })
+    request_redraw(state, {
+      cursor_row = current_row(),
+      auto_open = viewer_opts.auto_open,
+    })
   end)
 
-  local normalized_keymaps = controller.attach(bufnr, opts.keymaps, {
+  local normalized_keymaps = controller.attach(bufnr, viewer_opts.keymaps, {
     rerun = function()
       if obj.rerun_fn then
         obj.rerun_fn()
@@ -168,7 +207,7 @@ function M.new(opts)
   })
 
   function obj:open()
-    open_window(bufnr)
+    open_window(bufnr, viewer_opts)
   end
 
   function obj:close()
@@ -236,7 +275,7 @@ function M.new(opts)
     local parsed = vim.deepcopy(state.parsed)
     for _, case_result in ipairs(parsed.cases or {}) do
       if case_result.name == case_name then
-        case_result.preview = expanded_cases[case_name] and case_service.preview(state.test_dir_path, case_name, 20) or nil
+        case_result.preview = expanded_cases[case_name] and case_service.preview(state.test_dir_path, case_name, viewer_opts.preview_max_lines) or nil
       end
     end
 
@@ -245,7 +284,11 @@ function M.new(opts)
     next_state.expanded_cases = expanded_cases
     next_state.selected_case = case_name
     self.store:set_state(next_state, { silent = true })
-    request_redraw(next_state, { force = true, cursor_row = current_row() })
+    request_redraw(next_state, {
+      force = true,
+      cursor_row = current_row(),
+      auto_open = viewer_opts.auto_open,
+    })
   end
 
   function obj:edit_case()
@@ -302,7 +345,11 @@ function M.new(opts)
     next_state.expanded_cases = expanded_cases
     next_state.selected_case = nil
     self.store:set_state(next_state, { silent = true })
-    request_redraw(next_state, { force = true, cursor_row = current_row() })
+    request_redraw(next_state, {
+      force = true,
+      cursor_row = current_row(),
+      auto_open = viewer_opts.auto_open,
+    })
   end
 
   function obj:update(test_result, callback)
@@ -334,7 +381,7 @@ function M.new(opts)
     { silent = true }
   )
   vim.schedule(function()
-    redraw(obj.store:get_state())
+    redraw(obj.store:get_state(), { auto_open = viewer_opts.auto_open })
   end)
 
   return obj

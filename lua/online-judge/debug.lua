@@ -20,12 +20,12 @@ function M.setup()
       local final_config = vim.deepcopy(cfg)
       local build_command = cfg.build
       vim.system(build_command, {}, function(out)
-        if out.code ~= 0 then
-          vim.print(out.stderr)
-          return
-        end
-
         vim.schedule(function()
+          if out.code ~= 0 then
+            vim.print(out.stderr)
+            return
+          end
+
           on_config(final_config)
         end)
       end)

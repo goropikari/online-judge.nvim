@@ -8,6 +8,7 @@ end
 
 ---@class PluginConfig
 ---@field oj {path:string, tle:number, mle:integer, exact_match:boolean, precision:string}
+---@field viewer {auto_open:boolean, position:string, width:number, height:number, preview_max_lines:integer, keymaps:table<string, any>}
 ---@field codelldb_path string
 ---@field cache_dir string
 ---@field out_dirpath string
@@ -23,6 +24,14 @@ local default_config = {
     exact_match = true,
     precision = '1e-6',
   },
+  viewer = {
+    auto_open = true,
+    position = 'right',
+    width = 0.4,
+    height = 0.3,
+    preview_max_lines = 20,
+    keymaps = {},
+  },
   codelldb_path = vim.fn.exepath('codelldb'),
   out_dirpath = '/tmp/online-judge.nvim/',
   define_cmds = true,
@@ -31,11 +40,10 @@ local default_config = {
 }
 
 ---@type PluginConfig
----@diagnostic disable-next-line
-local config = {}
+local config = vim.deepcopy(default_config)
 
 function M.setup(opts)
-  config = vim.tbl_deep_extend('force', default_config, opts or {})
+  config = vim.tbl_deep_extend('force', vim.deepcopy(default_config), opts or {})
 end
 
 ---@return PluginConfig
@@ -90,6 +98,11 @@ end
 
 function M.reset_precision()
   config.oj.precision = default_config.oj.precision
+end
+
+---@return table
+function M.viewer()
+  return config.viewer
 end
 
 ---@return string
