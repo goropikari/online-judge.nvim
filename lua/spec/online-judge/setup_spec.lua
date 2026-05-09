@@ -1,19 +1,24 @@
 local mock = require('luassert.mock')
 
 describe('setup', function()
-  local oj
-
-  before_each(function()
-    package.loaded['online-judge'] = nil
-    oj = require('online-judge')
-  end)
-
   it('passes viewer config to result viewer', function()
     local result_viewer = mock(require('online-judge.result_viewer'), true)
     local config = mock(require('online-judge.config'), true)
     local lang = mock(require('online-judge.language'), true)
     local debug = mock(require('online-judge.debug'), true)
+    package.loaded['online-judge'] = nil
+    local oj = require('online-judge')
 
+    local viewer_config = {
+      auto_open = false,
+      position = 'bottom',
+      width = 0.5,
+      height = 0.25,
+      preview_max_lines = 7,
+      keymaps = {
+        rerun = 'R',
+      },
+    }
     config.get.returns({
       viewer = {
         auto_open = false,
@@ -30,8 +35,11 @@ describe('setup', function()
       cache_dir = '/tmp/online-judge.nvim/cache',
       define_cmds = false,
     })
+    config.viewer.returns(viewer_config)
+    debug.setup = function() end
     result_viewer.new.returns({
       register_rerun_fn = function() end,
+      register_rerun_case_fn = function() end,
       register_submit_fn = function() end,
       register_debug_fn = function() end,
     })
@@ -61,15 +69,10 @@ describe('setup', function()
 end)
 
 describe('settings api', function()
-  local oj
-
-  before_each(function()
-    package.loaded['online-judge'] = nil
-    oj = require('online-judge')
-  end)
-
   it('delegates grouped runtime settings', function()
     local config = mock(require('online-judge.config'), true)
+    package.loaded['online-judge'] = nil
+    local oj = require('online-judge')
 
     oj.settings.enable_exact_match()
     oj.settings.disable_exact_match()

@@ -1,4 +1,5 @@
 local mock = require('luassert.mock')
+local match = require('luassert.match')
 local stub = require('luassert.stub')
 
 describe('public workflows', function()
@@ -6,8 +7,6 @@ describe('public workflows', function()
   local viewer
 
   before_each(function()
-    package.loaded['online-judge'] = nil
-    oj = require('online-judge')
     viewer = {
       register_rerun_fn = function() end,
       register_rerun_case_fn = function() end,
@@ -32,17 +31,21 @@ describe('public workflows', function()
       cache_dir = '/tmp/online-judge.nvim/cache',
       define_cmds = false,
     })
+    config.viewer.returns({})
+    debug.setup = function() end
     result_viewer.new.returns(viewer)
 
+    package.loaded['online-judge'] = nil
+    oj = require('online-judge')
     oj.setup({})
 
     return result_viewer, config, lang, debug
   end
 
   it('runs the test workflow from the current source context', function()
-    local result_viewer, config, lang, debug = setup_plugin()
     local source_context = mock(require('online-judge.source_context'), true)
     local test_flow = mock(require('online-judge.test_flow'), true)
+    local result_viewer, config, lang, debug = setup_plugin()
 
     source_context.current.returns({
       filetype = 'cpp',
@@ -69,9 +72,9 @@ describe('public workflows', function()
   end)
 
   it('starts submit-after-test from the current source context', function()
-    local result_viewer, config, lang, debug = setup_plugin()
     local source_context = mock(require('online-judge.source_context'), true)
     local test_flow = mock(require('online-judge.test_flow'), true)
+    local result_viewer, config, lang, debug = setup_plugin()
 
     source_context.current.returns({
       filetype = 'cpp',
@@ -98,10 +101,10 @@ describe('public workflows', function()
   end)
 
   it('submits after the test callback completes', function()
-    local result_viewer, config, lang, debug = setup_plugin()
     local source_context = mock(require('online-judge.source_context'), true)
     local test_flow = mock(require('online-judge.test_flow'), true)
     local submission_flow = mock(require('online-judge.submission_flow'), true)
+    local result_viewer, config, lang, debug = setup_plugin()
     local defer_fn = stub(vim, 'defer_fn', function(fn, _)
       fn()
     end)
@@ -140,9 +143,9 @@ describe('public workflows', function()
   end)
 
   it('runs the selected test case from the current source context', function()
-    local result_viewer, config, lang, debug = setup_plugin()
     local source_context = mock(require('online-judge.source_context'), true)
     local test_flow = mock(require('online-judge.test_flow'), true)
+    local result_viewer, config, lang, debug = setup_plugin()
 
     source_context.current.returns({
       filetype = 'cpp',
