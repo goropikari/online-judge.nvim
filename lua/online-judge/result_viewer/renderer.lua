@@ -21,7 +21,12 @@ function M.render(state)
     'command: ' .. (state.command or ''),
     'exact_match: ' .. tostring(config.exact_match()) .. ', ' .. config.precision(),
     '',
-    'help {{{',
+  }
+  local line_map = {}
+
+  local help_start = #lines + 1
+  vim.list_extend(lines, {
+    'help',
     string.format('  %s: rerun test cases', keymaps.rerun or 'r'),
     string.format('  %s: rerun selected test case', keymaps.rerun_case or 'R'),
     string.format('  %s: submit current file', keymaps.submit or 's'),
@@ -31,10 +36,14 @@ function M.render(state)
     string.format('  %s: copy test case', keymaps.copy_case or 'c'),
     string.format('  %s: delete test case', keymaps.delete_case or 'D'),
     string.format('  %s: debug selected case', keymaps.debug_case or 'd'),
-    '}}}',
-    '',
-  }
-  local line_map = {}
+  })
+  local help_end = #lines
+  for line_number = help_start, help_end do
+    line_map[line_number] = {
+      kind = 'help',
+    }
+  end
+  table.insert(lines, '')
 
   if state.error_lines and #state.error_lines > 0 then
     table.insert(lines, 'error')

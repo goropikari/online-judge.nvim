@@ -61,11 +61,12 @@ describe('result viewer config', function()
 
     local lines = vim.api.nvim_buf_get_lines(viewer.bufnr, 0, -1, false)
 
-    assert.is_true(vim.tbl_contains(lines, 'help {{{'))
+    assert.is_true(vim.tbl_contains(lines, 'help'))
     assert.is_true(vim.tbl_contains(lines, '  R, <F5>: rerun test cases'))
     assert.is_true(vim.tbl_contains(lines, '  gr: rerun selected test case'))
     assert.is_true(vim.tbl_contains(lines, '  : debug selected case'))
-    assert.is_true(vim.tbl_contains(lines, '}}}'))
+    assert.is_false(vim.tbl_contains(lines, 'help {{{'))
+    assert.is_false(vim.tbl_contains(lines, '}}}'))
 
     schedule:revert()
     create_autocmd:revert()

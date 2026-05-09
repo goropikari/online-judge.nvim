@@ -22,11 +22,39 @@ local default_state = {
   keymaps = {},
 }
 
+local function configure_window(winid)
+  vim.api.nvim_set_option_value('foldmethod', 'manual', { win = winid })
+  vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
+end
+
+local function apply_help_fold(winid, line_map)
+  if winid == -1 or not vim.api.nvim_win_is_valid(winid) then
+    return
+  end
+
+  local first_line = nil
+  local last_line = nil
+  for line_number, meta in pairs(line_map or {}) do
+    if meta.kind == 'help' then
+      first_line = first_line and math.min(first_line, line_number) or line_number
+      last_line = last_line and math.max(last_line, line_number) or line_number
+    end
+  end
+
+  if not first_line or not last_line or first_line == last_line then
+    return
+  end
+
+  vim.api.nvim_win_call(winid, function()
+    vim.cmd('silent! normal! zE')
+    vim.cmd(string.format('silent! %d,%dfold', first_line, last_line))
+  end)
+end
+
 local function open_window(bufnr, viewer_opts)
   local winid = utils.get_window_id(bufnr)
   if vim.api.nvim_win_is_valid(winid) then
-    vim.api.nvim_set_option_value('foldmethod', 'marker', { win = winid })
-    vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
+    configure_window(winid)
     return winid
   end
 
@@ -41,8 +69,7 @@ local function open_window(bufnr, viewer_opts)
       border = 'single',
       style = 'minimal',
     })
-    vim.api.nvim_set_option_value('foldmethod', 'marker', { win = winid })
-    vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
+    configure_window(winid)
     return winid
   end
 
@@ -58,8 +85,7 @@ local function open_window(bufnr, viewer_opts)
   end
 
   winid = vim.api.nvim_open_win(bufnr, false, open_opts)
-  vim.api.nvim_set_option_value('foldmethod', 'marker', { win = winid })
-  vim.api.nvim_set_option_value('foldlevel', 99, { win = winid })
+  configure_window(winid)
   return winid
 end
 
@@ -131,6 +157,7 @@ function M.new(opts)
     else
       winid = utils.get_window_id(bufnr)
     end
+    apply_help_fold(winid, obj.line_map)
 
     local target_row = opts.cursor_row
     if target_row and winid ~= -1 and vim.api.nvim_win_is_valid(winid) then
@@ -213,7 +240,8 @@ function M.new(opts)
   })
 
   function obj:open()
-    open_window(bufnr, viewer_opts)
+    local winid = open_window(bufnr, viewer_opts)
+    apply_help_fold(winid, self.line_map)
   end
 
   function obj:close()
